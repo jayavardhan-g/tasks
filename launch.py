@@ -1,46 +1,8 @@
 import os
 import subprocess
 import platform
-import time
 import sys
-
-class Getch:
-    """Gets a single character from standard input.  Does not echo to the screen."""
-    def __init__(self):
-        try:
-            self.impl = _GetchWindows()
-        except ImportError:
-            self.impl = _GetchUnix()
-
-    def __call__(self): return self.impl()
-
-
-class _GetchUnix:
-    def __init__(self):
-        import tty, termios
-    def __call__(self):
-        import sys, tty, termios
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
-
-
-class _GetchWindows:
-    def __init__(self):
-        import msvcrt
-    def __call__(self):
-        import msvcrt
-        # getch returns bytes, so we decode it to string
-        return msvcrt.getch().decode('utf-8')
-
-
-# --- HOW TO USE IT ---
-getch = Getch()
+import time
 
 def get_gradle_command():
     return "gradlew.bat" if platform.system() == "Windows" else "./gradlew"
