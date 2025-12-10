@@ -11,7 +11,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -22,6 +24,8 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -51,6 +55,7 @@ fun TaskScreen(
 ) {
     val tasks by viewModel.allTasks.observeAsState(initial = emptyList())
     var showAddDialog by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(0) } // 0 for List, 1 for Timeline
 
     Scaffold(
         topBar = {
@@ -62,22 +67,51 @@ fun TaskScreen(
                 )
             )
         },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    icon = { Icon(Icons.Default.List, contentDescription = "List") },
+                    label = { Text("List") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    icon = { Icon(Icons.Default.DateRange, contentDescription = "Timeline") },
+                    label = { Text("Timeline") }
+                )
+            }
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Task")
             }
         }
     ) { innerPadding ->
-        TaskList(
-            tasks = tasks,
-            onCheckedChange = { task, checked ->
-                viewModel.update(task.copy(isCompleted = checked))
-            },
-            onDelete = { task ->
-                viewModel.delete(task)
-            },
-            modifier = Modifier.padding(innerPadding)
-        )
+        if (selectedTab == 0) {
+            TaskList(
+                tasks = tasks,
+                onCheckedChange = { task, checked ->
+                    viewModel.update(task.copy(isCompleted = checked))
+                },
+                onDelete = { task ->
+                    viewModel.delete(task)
+                },
+                modifier = Modifier.padding(innerPadding)
+            )
+        } else {
+            TimelineView(
+                tasks = tasks,
+                onCheckedChange = { task, checked ->
+                    viewModel.update(task.copy(isCompleted = checked))
+                },
+                onDelete = { task ->
+                    viewModel.delete(task)
+                },
+                modifier = Modifier.padding(innerPadding)
+            )
+        }
 
         if (showAddDialog) {
             AddTaskDialog(
