@@ -35,6 +35,7 @@ fun TimelineView(
     workspaces: Map<Int, com.example.tasks.data.Workspace> = emptyMap(),
     onCheckedChange: (Task, Boolean) -> Unit,
     onDelete: (Task) -> Unit,
+    onEdit: (Task) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val groupedTasks = remember(tasks) {
@@ -59,7 +60,8 @@ fun TimelineView(
                     workspaceName = workspace?.name,
                     workspaceColor = workspace?.color,
                     onCheckedChange = onCheckedChange,
-                    onDelete = onDelete
+                    onDelete = onDelete,
+                    onEdit = onEdit
                 )
             }
         }
@@ -86,7 +88,8 @@ fun TimelineTaskItem(
     workspaceName: String? = null,
     workspaceColor: Long? = null,
     onCheckedChange: (Task, Boolean) -> Unit,
-    onDelete: (Task) -> Unit
+    onDelete: (Task) -> Unit,
+    onEdit: (Task) -> Unit
 ) {
     Row(modifier = Modifier.height(IntrinsicSize.Min)) {
         // Timeline Line
@@ -114,7 +117,8 @@ fun TimelineTaskItem(
                 workspaceName = workspaceName,
                 workspaceColor = workspaceColor,
                 onCheckedChange = onCheckedChange,
-                onDelete = onDelete
+                onDelete = onDelete,
+                onEdit = onEdit
             )
         }
     }

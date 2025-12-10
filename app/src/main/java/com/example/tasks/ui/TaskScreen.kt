@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -39,9 +40,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerState
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,6 +60,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.example.tasks.data.Task
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -72,6 +77,7 @@ fun TaskScreen(
 
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var showAddWorkspaceDialog by remember { mutableStateOf(false) }
+    var editingTask by remember { mutableStateOf<Task?>(null) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Timeline, 1 = Workspace
 
     val workspacesMap = remember(workspaces) {
@@ -128,6 +134,9 @@ fun TaskScreen(
                     },
                     onDelete = { task ->
                         viewModel.delete(task)
+                    },
+                    onEdit = { task ->
+                        editingTask = task
                     }
                 )
             } else {
@@ -171,6 +180,9 @@ fun TaskScreen(
                             },
                             onDelete = { task ->
                                 viewModel.delete(task)
+                            },
+                            onEdit = { task ->
+                                editingTask = task
                             }
                         )
                     }
@@ -178,19 +190,33 @@ fun TaskScreen(
             }
         }
 
-        if (showAddTaskDialog) {
-            AddTaskDialog(
+        if (showAddTaskDialog || editingTask != null) {
+            TaskDialog(
+                task = editingTask,
                 workspaces = workspaces,
-                onDismiss = { showAddTaskDialog = false },
-                onAdd = { title, desc, deadline, workspaceId ->
-                    val task = Task(
-                        title = title,
-                        description = desc,
-                        deadline = deadline,
-                        workspaceId = workspaceId
-                    )
-                    viewModel.insert(task)
+                onDismiss = { 
+                    showAddTaskDialog = false 
+                    editingTask = null
+                },
+                onSave = { title, desc, deadline, workspaceId ->
+                    if (editingTask != null) {
+                        viewModel.update(editingTask!!.copy(
+                            title = title,
+                            description = desc,
+                            deadline = deadline,
+                            workspaceId = workspaceId
+                        ))
+                    } else {
+                        val task = Task(
+                            title = title,
+                            description = desc,
+                            deadline = deadline,
+                            workspaceId = workspaceId
+                        )
+                        viewModel.insert(task)
+                    }
                     showAddTaskDialog = false
+                    editingTask = null
                 },
                 onAddWorkspace = { name ->
                     val randomColor = (0xFF000000..0xFFFFFFFF).random() or 0xFF000000 // Ensure opaque
@@ -274,33 +300,48 @@ fun AddWorkspaceDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTaskDialog(
+fun TaskDialog(
+    task: Task? = null,
     workspaces: List<com.example.tasks.data.Workspace>,
     onDismiss: () -> Unit,
-    onAdd: (String, String, Long, Int?) -> Unit, // Int? is workspaceId
+    onSave: (String, String, Long, Int?) -> Unit,
     onAddWorkspace: (String) -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf(task?.title ?: "") }
+    var description by remember { mutableStateOf(task?.description ?: "") }
     var showDatePicker by remember { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf(System.currentTimeMillis()) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var selectedDate by remember { mutableStateOf(task?.deadline ?: System.currentTimeMillis()) }
     
     var expanded by remember { mutableStateOf(false) }
-    var selectedWorkspace by remember { mutableStateOf<com.example.tasks.data.Workspace?>(null) }
+    var selectedWorkspace by remember { 
+        mutableStateOf(workspaces.find { it.id == task?.workspaceId }) 
+    }
     var showNewWorkspaceInput by remember { mutableStateOf(false) }
     var newWorkspaceName by remember { mutableStateOf("") }
 
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = System.currentTimeMillis())
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDate)
+    val timePickerState = rememberTimePickerState(
+        initialHour = Calendar.getInstance().apply { timeInMillis = selectedDate }.get(Calendar.HOUR_OF_DAY),
+        initialMinute = Calendar.getInstance().apply { timeInMillis = selectedDate }.get(Calendar.MINUTE)
+    )
 
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { selectedDate = it }
+                    datePickerState.selectedDateMillis?.let { date ->
+                        val calendar = Calendar.getInstance()
+                        calendar.timeInMillis = date
+                        // Preserve time if only changing date, or reset? Let's just set date.
+                        // Ideally we flow to TimePicker next
+                        selectedDate = calendar.timeInMillis
+                    }
                     showDatePicker = false
+                    showTimePicker = true // Open time picker after date
                 }) {
-                    Text("OK")
+                    Text("Next")
                 }
             },
             dismissButton = {
@@ -312,10 +353,36 @@ fun AddTaskDialog(
             DatePicker(state = datePickerState)
         }
     }
+    
+    if (showTimePicker) {
+         AlertDialog(
+             onDismissRequest = { showTimePicker = false },
+             confirmButton = {
+                 TextButton(onClick = {
+                     val calendar = Calendar.getInstance()
+                     calendar.timeInMillis = selectedDate
+                     calendar.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                     calendar.set(Calendar.MINUTE, timePickerState.minute)
+                     selectedDate = calendar.timeInMillis
+                     showTimePicker = false
+                 }) {
+                     Text("OK")
+                 }
+             },
+             dismissButton = {
+                 TextButton(onClick = { showTimePicker = false }) {
+                     Text("Cancel")
+                 }
+             },
+             text = {
+                 TimePicker(state = timePickerState)
+             }
+         )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add New Task") },
+        title = { Text(if (task == null) "Add New Task" else "Edit Task") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -330,7 +397,7 @@ fun AddTaskDialog(
                     label = { Text("Description") }
                 )
                 
-                val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+                val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
                 Button(
                     onClick = { showDatePicker = true },
                     modifier = Modifier.fillMaxWidth()
@@ -401,9 +468,6 @@ fun AddTaskDialog(
                         Button(onClick = {
                             if (newWorkspaceName.isNotBlank()) {
                                 onAddWorkspace(newWorkspaceName)
-                                // We can't automatically select it here easily without a callback return or observing logic,
-                                // but the user can select it after it appears in the list.
-                                // Improvement: ViewModel could return ID, but for now simplistic approach.
                                 showNewWorkspaceInput = false
                                 newWorkspaceName = ""
                             }
@@ -418,11 +482,11 @@ fun AddTaskDialog(
             Button(
                 onClick = { 
                     if (title.isNotBlank()) {
-                        onAdd(title, description, selectedDate, selectedWorkspace?.id)
+                        onSave(title, description, selectedDate, selectedWorkspace?.id)
                     }
                 }
             ) {
-                Text("Save Task")
+                Text("Save")
             }
         },
         dismissButton = {
@@ -439,7 +503,8 @@ fun TaskItem(
     workspaceName: String? = null,
     workspaceColor: Long? = null,
     onCheckedChange: (Task, Boolean) -> Unit,
-    onDelete: (Task) -> Unit
+    onDelete: (Task) -> Unit,
+    onEdit: (Task) -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -462,7 +527,7 @@ fun TaskItem(
                 style = MaterialTheme.typography.bodyLarge,
                 textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
             )
-            val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = dateFormat.format(Date(task.deadline)),
@@ -484,6 +549,9 @@ fun TaskItem(
                     )
                 }
             }
+        }
+        IconButton(onClick = { onEdit(task) }) {
+            Icon(Icons.Default.Edit, contentDescription = "Edit Task")
         }
         IconButton(onClick = { onDelete(task) }) {
             Icon(Icons.Default.Delete, contentDescription = "Delete Task")
