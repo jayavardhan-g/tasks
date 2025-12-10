@@ -28,6 +28,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,7 +75,7 @@ fun TaskScreen(
     var selectedTab by remember { mutableStateOf(0) } // 0 = Timeline, 1 = Workspace
 
     val workspacesMap = remember(workspaces) {
-        workspaces.associate { it.id to it.name }
+        workspaces.associateBy { it.id }
     }
 
     Scaffold(
@@ -148,7 +149,11 @@ fun TaskScreen(
                             FilterChip(
                                 selected = workspace.id == currentWorkspaceId,
                                 onClick = { viewModel.setWorkspace(workspace.id) },
-                                label = { Text(workspace.name) }
+                                label = { Text(workspace.name) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = androidx.compose.ui.graphics.Color(workspace.color),
+                                    selectedLabelColor = androidx.compose.ui.graphics.Color.White
+                                )
                             )
                         }
                     }
@@ -188,7 +193,8 @@ fun TaskScreen(
                     showAddTaskDialog = false
                 },
                 onAddWorkspace = { name ->
-                    viewModel.insertWorkspace(com.example.tasks.data.Workspace(name = name))
+                    val randomColor = (0xFF000000..0xFFFFFFFF).random() or 0xFF000000 // Ensure opaque
+                    viewModel.insertWorkspace(com.example.tasks.data.Workspace(name = name, color = randomColor))
                 }
             )
         }
@@ -197,7 +203,8 @@ fun TaskScreen(
             AddWorkspaceDialog(
                 onDismiss = { showAddWorkspaceDialog = false },
                 onAdd = { name ->
-                    viewModel.insertWorkspace(com.example.tasks.data.Workspace(name = name))
+                    val randomColor = (0xFF000000..0xFFFFFFFF).random() or 0xFF000000
+                    viewModel.insertWorkspace(com.example.tasks.data.Workspace(name = name, color = randomColor))
                     showAddWorkspaceDialog = false
                 }
             )
@@ -430,6 +437,7 @@ fun AddTaskDialog(
 fun TaskItem(
     task: Task,
     workspaceName: String? = null,
+    workspaceColor: Long? = null,
     onCheckedChange: (Task, Boolean) -> Unit,
     onDelete: (Task) -> Unit
 ) {
@@ -466,10 +474,10 @@ fun TaskItem(
                     Text(
                         text = workspaceName,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = if (workspaceColor != null) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .background(
-                                MaterialTheme.colorScheme.primaryContainer,
+                                color = if (workspaceColor != null) androidx.compose.ui.graphics.Color(workspaceColor) else MaterialTheme.colorScheme.primaryContainer,
                                 shape = MaterialTheme.shapes.small
                             )
                             .padding(horizontal = 4.dp, vertical = 2.dp)
