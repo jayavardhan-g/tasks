@@ -14,6 +14,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY deadline ASC")
     fun getTasks(): Flow<List<Task>>
 
+    @Query("SELECT * FROM tasks WHERE workspaceId = :workspaceId ORDER BY deadline ASC")
+    fun getTasksByWorkspace(workspaceId: Int): Flow<List<Task>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTask(task: Task)
 

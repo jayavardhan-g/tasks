@@ -32,6 +32,7 @@ import java.util.Locale
 @Composable
 fun TimelineView(
     tasks: List<Task>,
+    workspaces: Map<Int, String> = emptyMap(),
     onCheckedChange: (Task, Boolean) -> Unit,
     onDelete: (Task) -> Unit,
     modifier: Modifier = Modifier
@@ -54,6 +55,7 @@ fun TimelineView(
             items(tasksForDate) { task ->
                 TimelineTaskItem(
                     task = task,
+                    workspaceName = if (task.workspaceId != null) workspaces[task.workspaceId] else null,
                     onCheckedChange = onCheckedChange,
                     onDelete = onDelete
                 )
@@ -79,6 +81,7 @@ fun TimelineHeader(dateString: String) {
 @Composable
 fun TimelineTaskItem(
     task: Task,
+    workspaceName: String? = null,
     onCheckedChange: (Task, Boolean) -> Unit,
     onDelete: (Task) -> Unit
 ) {
@@ -105,6 +108,7 @@ fun TimelineTaskItem(
         Box(modifier = Modifier.weight(1f)) {
             TaskItem(
                 task = task,
+                workspaceName = workspaceName,
                 onCheckedChange = onCheckedChange,
                 onDelete = onDelete
             )
