@@ -15,33 +15,51 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.example.tasks.data.Task
+import com.example.tasks.ui.TaskItem
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
 fun TimelineView(
-    tasks: List<Task>,
+    tasksWithChecklists: List<com.example.tasks.data.TaskWithChecklist>,
     workspaces: Map<Int, com.example.tasks.data.Workspace> = emptyMap(),
     onCheckedChange: (Task, Boolean) -> Unit,
+    onChecklistItemChange: (com.example.tasks.data.ChecklistItem) -> Unit,
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val groupedTasks = remember(tasks) {
-        tasks.sortedBy { it.deadline }.groupBy {
+    val groupedTasks = remember(tasksWithChecklists) {
+        tasksWithChecklists.sortedBy { it.task.deadline }.groupBy {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            dateFormat.format(Date(it.deadline))
+            dateFormat.format(Date(it.task.deadline))
         }
     }
 
@@ -49,17 +67,21 @@ fun TimelineView(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)
     ) {
-        groupedTasks.forEach { (dateString, tasksForDate) ->
+        for ((dateString, tasksForDate) in groupedTasks) {
             item {
                 TimelineHeader(dateString = dateString)
             }
-            items(tasksForDate) { task ->
+            itemsIndexed(tasksForDate) { index, taskWithChecklist ->
+                val task = taskWithChecklist.task
                 val workspace = if (task.workspaceId != null) workspaces[task.workspaceId] else null
                 TimelineTaskItem(
                     task = task,
+                    checklist = taskWithChecklist.checklist,
+                    isLast = index == tasksForDate.lastIndex,
                     workspaceName = workspace?.name,
                     workspaceColor = workspace?.color,
                     onCheckedChange = onCheckedChange,
+                    onChecklistItemChange = onChecklistItemChange,
                     onDelete = onDelete,
                     onEdit = onEdit
                 )
@@ -85,9 +107,12 @@ fun TimelineHeader(dateString: String) {
 @Composable
 fun TimelineTaskItem(
     task: Task,
+    checklist: List<com.example.tasks.data.ChecklistItem> = emptyList(),
+    isLast: Boolean,
     workspaceName: String? = null,
     workspaceColor: Long? = null,
     onCheckedChange: (Task, Boolean) -> Unit,
+    onChecklistItemChange: (com.example.tasks.data.ChecklistItem) -> Unit,
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit
 ) {
@@ -112,14 +137,44 @@ fun TimelineTaskItem(
         
         // Task Item
         Box(modifier = Modifier.weight(1f)) {
-            TaskItem(
-                task = task,
-                workspaceName = workspaceName,
-                workspaceColor = workspaceColor,
-                onCheckedChange = onCheckedChange,
-                onDelete = onDelete,
-                onEdit = onEdit
-            )
+            Column {
+                TaskItem(
+                    task = task,
+                    workspaceName = workspaceName,
+                    workspaceColor = workspaceColor,
+                    onCheckedChange = onCheckedChange,
+                    onDelete = onDelete,
+                    onEdit = onEdit
+                )
+                
+                // Inline Checklist
+                if (checklist.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    checklist.forEach { item ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, bottom = 4.dp)
+                                .clickable { onChecklistItemChange(item) }
+                        ) {
+                            Checkbox(
+                                checked = item.isCompleted,
+                                onCheckedChange = { onChecklistItemChange(item) },
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = item.text,
+                                style = MaterialTheme.typography.bodySmall,
+                                textDecoration = if (item.isCompleted) TextDecoration.LineThrough else null,
+                                color = if (item.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
         }
     }
 }

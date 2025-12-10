@@ -11,15 +11,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -54,6 +57,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
@@ -127,10 +131,13 @@ fun TaskScreen(
             if (selectedTab == 0) {
                 // Timeline Tab (All Tasks)
                 TimelineView(
-                    tasks = globalTasks,
+                    tasksWithChecklists = globalTasks,
                     workspaces = workspacesMap,
                     onCheckedChange = { task, checked ->
                         viewModel.update(task.copy(isCompleted = checked))
+                    },
+                    onChecklistItemChange = { item ->
+                        viewModel.toggleChecklistItem(item)
                     },
                     onDelete = { task ->
                         viewModel.delete(task)
@@ -140,7 +147,7 @@ fun TaskScreen(
                     }
                 )
             } else {
-                // Workspace Tab
+                // ... (Workspace Tab logic to be updated similarly)
                 Column {
                     // Workspace Filter Chips
                     LazyRow(
@@ -151,17 +158,36 @@ fun TaskScreen(
                             FilterChip(
                                 selected = currentWorkspaceId == -1 || currentWorkspaceId == null,
                                 onClick = { viewModel.setWorkspace(-1) },
-                                label = { Text("All") }
+                                label = { Text("All") },
+                                leadingIcon = { 
+                                    Icon(
+                                        Icons.Default.Home, 
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    ) 
+                                }
                             )
                         }
                         items(workspaces) { workspace ->
+                            val isSelected = workspace.id == currentWorkspaceId
+                            val workspaceColor = androidx.compose.ui.graphics.Color(workspace.color)
+                            
                             FilterChip(
-                                selected = workspace.id == currentWorkspaceId,
+                                selected = isSelected,
                                 onClick = { viewModel.setWorkspace(workspace.id) },
                                 label = { Text(workspace.name) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = androidx.compose.ui.graphics.Color(workspace.color),
-                                    selectedLabelColor = androidx.compose.ui.graphics.Color.White
+                                    selectedContainerColor = workspaceColor,
+                                    selectedLabelColor = androidx.compose.ui.graphics.Color.White,
+                                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    labelColor = workspaceColor
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = isSelected,
+                                    borderColor = workspaceColor,
+                                    selectedBorderColor = workspaceColor,
+                                    borderWidth = 1.dp
                                 )
                             )
                         }
@@ -173,10 +199,13 @@ fun TaskScreen(
                          }
                     } else {
                         TimelineView(
-                            tasks = filteredTasks,
+                            tasksWithChecklists = filteredTasks,
                             workspaces = workspacesMap,
                             onCheckedChange = { task, checked ->
                                 viewModel.update(task.copy(isCompleted = checked))
+                            },
+                            onChecklistItemChange = { item ->
+                                viewModel.toggleChecklistItem(item)
                             },
                             onDelete = { task ->
                                 viewModel.delete(task)
@@ -191,21 +220,32 @@ fun TaskScreen(
         }
 
         if (showAddTaskDialog || editingTask != null) {
+            val checklist by if (editingTask != null) {
+                viewModel.getChecklist(editingTask!!.id).observeAsState(emptyList())
+            } else {
+                remember { mutableStateOf(emptyList()) }
+            }
+
             TaskDialog(
                 task = editingTask,
+                checklist = checklist,
                 workspaces = workspaces,
                 onDismiss = { 
                     showAddTaskDialog = false 
                     editingTask = null
                 },
-                onSave = { title, desc, deadline, workspaceId ->
+                onSave = { title, desc, deadline, workspaceId, checklistItems ->
                     if (editingTask != null) {
-                        viewModel.update(editingTask!!.copy(
+                        val updatedTask = editingTask!!.copy(
                             title = title,
                             description = desc,
                             deadline = deadline,
                             workspaceId = workspaceId
-                        ))
+                        )
+                        val mappedItems = checklistItems.map { 
+                            com.example.tasks.data.ChecklistItem(it.id, updatedTask.id, it.text, it.isCompleted) 
+                        }
+                        viewModel.updateTaskWithChecklist(updatedTask, mappedItems)
                     } else {
                         val task = Task(
                             title = title,
@@ -213,7 +253,10 @@ fun TaskScreen(
                             deadline = deadline,
                             workspaceId = workspaceId
                         )
-                        viewModel.insert(task)
+                        val items = checklistItems.map { 
+                            com.example.tasks.data.ChecklistItem(0, 0, it.text, it.isCompleted) 
+                        }
+                        viewModel.insertTaskWithChecklist(task, items)
                     }
                     showAddTaskDialog = false
                     editingTask = null
@@ -302,9 +345,10 @@ fun AddWorkspaceDialog(
 @Composable
 fun TaskDialog(
     task: Task? = null,
+    checklist: List<com.example.tasks.data.ChecklistItem> = emptyList(),
     workspaces: List<com.example.tasks.data.Workspace>,
     onDismiss: () -> Unit,
-    onSave: (String, String, Long, Int?) -> Unit,
+    onSave: (String, String, Long, Int?, List<ChecklistItemEntry>) -> Unit,
     onAddWorkspace: (String) -> Unit
 ) {
     var title by remember { mutableStateOf(task?.title ?: "") }
@@ -319,6 +363,21 @@ fun TaskDialog(
     }
     var showNewWorkspaceInput by remember { mutableStateOf(false) }
     var newWorkspaceName by remember { mutableStateOf("") }
+
+    // Checklist State
+    // Checklist State
+    val checklistItems = remember(checklist) { 
+        (if (task != null) {
+            checklist.map { ChecklistItemEntry(it.id, it.text, it.isCompleted) }
+        } else {
+            emptyList()
+        }).toMutableStateList()
+    }
+    // Update checklist items if checklist prop changes (e.g. initial load for edit)
+    // Actually remember(checklist) might be safer but local mutations would be lost if checklist updates from VM
+    // For now, assume initial load is enough.
+    
+    var newChecklistItemText by remember { mutableStateOf("") }
 
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDate)
     val timePickerState = rememberTimePickerState(
@@ -476,13 +535,69 @@ fun TaskDialog(
                         }
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider()
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text("Checklist", style = MaterialTheme.typography.titleSmall)
+                
+                // Add Item Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = newChecklistItemText,
+                        onValueChange = { newChecklistItemText = it },
+                        placeholder = { Text("Add item") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    IconButton(onClick = { 
+                        if (newChecklistItemText.isNotBlank()) {
+                            checklistItems.add(ChecklistItemEntry(0, newChecklistItemText, false))
+                            newChecklistItemText = ""
+                        }
+                    }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add")
+                    }
+                }
+                
+                // Checklist Items List
+                LazyColumn(modifier = Modifier.height(150.dp)) {
+                    itemsIndexed(checklistItems) { index, item ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Checkbox(
+                                checked = item.isCompleted,
+                                onCheckedChange = { checked ->
+                                    checklistItems[index] = item.copy(isCompleted = checked)
+                                }
+                            )
+                            Text(
+                                text = item.text,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium,
+                                textDecoration = if (item.isCompleted) TextDecoration.LineThrough else null
+                            )
+                            IconButton(onClick = { checklistItems.removeAt(index) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Remove")
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = { 
                     if (title.isNotBlank()) {
-                        onSave(title, description, selectedDate, selectedWorkspace?.id)
+                        onSave(title, description, selectedDate, selectedWorkspace?.id, checklistItems)
                     }
                 }
             ) {
@@ -558,3 +673,9 @@ fun TaskItem(
         }
     }
 }
+
+data class ChecklistItemEntry(
+    val id: Int, 
+    val text: String,
+    val isCompleted: Boolean
+)
