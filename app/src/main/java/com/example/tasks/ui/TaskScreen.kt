@@ -83,6 +83,7 @@ fun TaskScreen(
     val currentWorkspaceId by viewModel.currentWorkspaceId.observeAsState()
 
     var showAddTaskDialog by remember { mutableStateOf(false) }
+    var showNewTaskSheet by remember { mutableStateOf(false) }
     var showAddWorkspaceDialog by remember { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<Task?>(null) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Timeline, 1 = Workspace
@@ -125,7 +126,7 @@ fun TaskScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddTaskDialog = true }) {
+            FloatingActionButton(onClick = { showNewTaskSheet = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Task")
             }
         }
@@ -278,6 +279,30 @@ fun TaskScreen(
                     val randomColor = (0xFF000000..0xFFFFFFFF).random() or 0xFF000000
                     viewModel.insertWorkspace(com.example.tasks.data.Workspace(name = name, color = randomColor))
                     showAddWorkspaceDialog = false
+                }
+            )
+        }
+        
+        if (showNewTaskSheet) {
+            NewTaskBottomSheet(
+                workspaces = workspaces,
+                onDismiss = { showNewTaskSheet = false },
+                onSave = { title, desc, deadline, workspaceId, priority, tags ->
+                    val task = Task(
+                        title = title,
+                        description = desc,
+                        deadline = deadline,
+                        workspaceId = workspaceId,
+                        priority = priority,
+                        tags = tags
+                    )
+                    // For now empty checklist for new simple tasks
+                    viewModel.insertTaskWithChecklist(task, emptyList())
+                    showNewTaskSheet = false
+                },
+                onAddWorkspace = { name ->
+                    val randomColor = (0xFF000000..0xFFFFFFFF).random() or 0xFF000000
+                    viewModel.insertWorkspace(com.example.tasks.data.Workspace(name = name, color = randomColor))
                 }
             )
         }

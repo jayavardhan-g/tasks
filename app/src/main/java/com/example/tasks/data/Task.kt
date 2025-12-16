@@ -24,5 +24,7 @@ data class Task(
     val description: String,
     val deadline: Long, // Timestamp
     val isCompleted: Boolean = false,
-    val workspaceId: Int? = null
+    val workspaceId: Int? = null,
+    val priority: Int = 0, // 0: None, 1: Low, 2: Medium, 3: High
+    val tags: String = "" // Comma separated tags
 )
