@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Send
@@ -37,6 +39,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +60,8 @@ fun NewTaskBottomSheet(
     workspaces: List<Workspace>,
     onDismiss: () -> Unit,
     onSave: (String, String, Long, Int?, Int, String) -> Unit, // title, desc, deadline, workspaceId, priority, tags
-    onAddWorkspace: (String) -> Unit
+    onAddWorkspace: (String) -> Unit,
+    onExpandToFull: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     
@@ -76,9 +80,17 @@ fun NewTaskBottomSheet(
         sheetState = sheetState,
         windowInsets = WindowInsets.ime
     ) {
+        // Auto-expand logic
+        LaunchedEffect(sheetState.targetValue) {
+            if (sheetState.targetValue == androidx.compose.material3.SheetValue.Expanded) {
+                onExpandToFull()
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight() // Ensure it takes full height when expanded
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .padding(bottom = 16.dp) // Extra padding for navigation bar usually handled by scaffold but good here
         ) {
@@ -87,6 +99,9 @@ fun NewTaskBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                // IconButton(onClick = onExpandToFull) {
+                //     Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Full Page")
+                // }
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
