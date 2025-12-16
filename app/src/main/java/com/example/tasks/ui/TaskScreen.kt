@@ -1,6 +1,7 @@
 package com.example.tasks.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.CheckCircle
+
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -573,7 +576,7 @@ fun TaskDialog(
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
                         ) {
-                            Checkbox(
+                            CircularCheckbox(
                                 checked = item.isCompleted,
                                 onCheckedChange = { checked ->
                                     checklistItems[index] = item.copy(isCompleted = checked)
@@ -628,7 +631,7 @@ fun TaskItem(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(
+        CircularCheckbox(
             checked = task.isCompleted,
             onCheckedChange = { onCheckedChange(task, it) }
         )
@@ -676,3 +679,28 @@ data class ChecklistItemEntry(
     val text: String,
     val isCompleted: Boolean
 )
+
+@Composable
+fun CircularCheckbox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (checked) {
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = "Uncheck",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = modifier
+                .clickable { onCheckedChange(!checked) }
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .size(24.dp)
+                .padding(2.dp) // Adjust padding to match icon visual size if needed
+                .border(2.dp, MaterialTheme.colorScheme.onSurfaceVariant, androidx.compose.foundation.shape.CircleShape)
+                .clickable { onCheckedChange(!checked) }
+        )
+    }
+}

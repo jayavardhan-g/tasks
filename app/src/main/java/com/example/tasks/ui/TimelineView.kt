@@ -158,7 +158,7 @@ fun TimelineTaskItem(
                                 .padding(start = 32.dp, bottom = 4.dp)
                                 .clickable { onChecklistItemChange(item) }
                         ) {
-                            Checkbox(
+                            CircularCheckbox(
                                 checked = item.isCompleted,
                                 onCheckedChange = { onChecklistItemChange(item) },
                                 modifier = Modifier.size(24.dp)
