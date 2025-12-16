@@ -155,7 +155,7 @@ fun TimelineTaskItem(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(start = 16.dp, bottom = 4.dp)
+                                .padding(start = 32.dp, bottom = 4.dp)
                                 .clickable { onChecklistItemChange(item) }
                         ) {
                             Checkbox(

@@ -624,7 +624,7 @@ fun TaskItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(task, !task.isCompleted) }
+            .clickable { onEdit(task) }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -664,9 +664,6 @@ fun TaskItem(
                     )
                 }
             }
-        }
-        IconButton(onClick = { onEdit(task) }) {
-            Icon(Icons.Default.Edit, contentDescription = "Edit Task")
         }
         IconButton(onClick = { onDelete(task) }) {
             Icon(Icons.Default.Delete, contentDescription = "Delete Task")
