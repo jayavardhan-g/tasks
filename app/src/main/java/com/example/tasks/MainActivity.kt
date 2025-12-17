@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
 
 sealed interface Screen {
     object Home : Screen
-    object NewTask : Screen
+    data class NewTask(val draft: com.example.tasks.data.TaskDraft? = null) : Screen
     data class EditTask(val task: Task, val checklist: List<com.example.tasks.data.ChecklistItem>) : Screen
 }
 
@@ -52,7 +52,7 @@ fun TasksApp(viewModel: TasksViewModel) {
         is Screen.Home -> {
             TaskScreen(
                 viewModel = viewModel,
-                onNavigateToNewTask = { navigateTo(Screen.NewTask) },
+                onNavigateToNewTask = { draft -> navigateTo(Screen.NewTask(draft)) },
                 onEditTask = { task, checklist -> 
                     navigateTo(Screen.EditTask(task, checklist))
                 }
@@ -64,6 +64,7 @@ fun TasksApp(viewModel: TasksViewModel) {
             
             NewTaskScreen(
                 workspaces = workspaces,
+                draftTask = screen.draft,
                 onNavigateBack = { navigateTo(Screen.Home) },
                 onSave = { title, desc, deadline, workspaceId, priority, tags, checklistItems ->
                      val task = Task(

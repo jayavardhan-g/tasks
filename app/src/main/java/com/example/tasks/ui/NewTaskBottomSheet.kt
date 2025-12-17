@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Notifications
 
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -48,6 +50,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.ui.text.font.FontWeight
 import com.example.tasks.data.Workspace
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -61,59 +66,71 @@ fun NewTaskBottomSheet(
     onDismiss: () -> Unit,
     onSave: (String, String, Long, Int?, Int, String) -> Unit, // title, desc, deadline, workspaceId, priority, tags
     onAddWorkspace: (String) -> Unit,
-    onExpandToFull: () -> Unit
+    onExpandToFull: (String, Long?, Int?, Int) -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    
     var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var selectedDate by remember { mutableStateOf(System.currentTimeMillis()) }
+    var selectedDate by remember { mutableStateOf<Long?>(System.currentTimeMillis()) }
     var selectedWorkspace by remember { mutableStateOf<Workspace?>(null) }
-    var priority by remember { mutableStateOf(0) } // 0: None, 1: Low, 2: Medium, 3: High
-    var tags by remember { mutableStateOf("") }
+    var priority by remember { mutableStateOf(0) }
     
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showTimePicker by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) } 
+    var showDateTimePickerSheet by remember { mutableStateOf(false) } 
+    var showWorkspaceSheet by remember { mutableStateOf(false) }
+    var showPrioritySheet by remember { mutableStateOf(false) }
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = false,
+        confirmValueChange = { newState ->
+            if (newState == androidx.compose.material3.SheetValue.Expanded) {
+                onExpandToFull(title, selectedDate, selectedWorkspace?.id, priority)
+                false // Don't snap to expanded visually, just navigate
+            } else {
+                true
+            }
+        }
+    )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         windowInsets = WindowInsets.ime
     ) {
-        // Auto-expand logic
-        LaunchedEffect(sheetState.targetValue) {
-            if (sheetState.targetValue == androidx.compose.material3.SheetValue.Expanded) {
-                onExpandToFull()
-            }
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight() // Ensure it takes full height when expanded
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .padding(bottom = 16.dp) // Extra padding for navigation bar usually handled by scaffold but good here
+                .padding(bottom = 16.dp) 
         ) {
-            // Header / Quick Entry
+            // Header: Title + Save
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // IconButton(onClick = onExpandToFull) {
-                //     Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Full Page")
-                // }
-                OutlinedTextField(
+                androidx.compose.foundation.text.BasicTextField(
                     value = title,
                     onValueChange = { title = it },
-                    placeholder = { Text("New Task") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontSize = 24.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onBackground
+                    ),
+                    decorationBox = { innerTextField ->
+                        androidx.compose.foundation.layout.Box {
+                            if (title.isEmpty()) {
+                                Text("New Task", style = androidx.compose.ui.text.TextStyle(fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant))
+                            }
+                            innerTextField()
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
                 )
+                
                 Spacer(modifier = Modifier.width(8.dp))
+                
                 IconButton(
                     onClick = { 
                         if (title.isNotBlank()) {
-                            onSave(title, description, selectedDate, selectedWorkspace?.id, priority, tags)
+                            onSave(title, "", selectedDate ?: System.currentTimeMillis(), selectedWorkspace?.id, priority, "")
                         }
                     },
                     enabled = title.isNotBlank()
@@ -122,151 +139,105 @@ fun NewTaskBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Workspace Option
+            OptionRow(
+                icon = Icons.Default.List, 
+                text = selectedWorkspace?.name ?: "Select workspace",
+                onClick = { showWorkspaceSheet = true }
+            )
 
-            // Quick Options Row
+            // Date / Time Option
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Icon(androidx.compose.material.icons.Icons.Outlined.DateRange, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(16.dp))
+                
                 val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
+                val dateLabel = if (selectedDate != null) dateFormat.format(Date(selectedDate!!)) else "No date"
+                
+                AssistChip(
+                    onClick = { showDateTimePickerSheet = true },
+                    label = { Text(dateLabel) },
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+
                 val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-                
+                val timeLabel = if (selectedDate != null) timeFormat.format(Date(selectedDate!!)) else "No time"
                 AssistChip(
-                    onClick = { showDatePicker = true },
-                    label = { Text(dateFormat.format(Date(selectedDate))) },
-                    leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) }
-                )
-                
-                AssistChip(
-                    onClick = { showTimePicker = true },
-                    label = { Text(timeFormat.format(Date(selectedDate))) },
-                    leadingIcon = { Icon(Icons.Default.Notifications, contentDescription = null) }
-                )
-                
-                AssistChip(
-                    onClick = { /* Toggle Workspace logic, simpler for MVP */ 
-                        // For now, just a simplified toggle for the first workspace or None
-                         if (workspaces.isNotEmpty()) {
-                             val currentIndex = workspaces.indexOf(selectedWorkspace)
-                             val nextIndex = currentIndex + 1
-                             selectedWorkspace = if (nextIndex < workspaces.size) workspaces[nextIndex] else null
-                         }
-                    },
-                    label = { Text(selectedWorkspace?.name ?: "No Project") },
-                    leadingIcon = { 
-                        Icon(
-                            Icons.Default.List, 
-                            contentDescription = null,
-                            tint = if (selectedWorkspace != null) androidx.compose.ui.graphics.Color(selectedWorkspace!!.color) else MaterialTheme.colorScheme.onSurface
-                        ) 
-                    },
-                     colors = if (selectedWorkspace != null) AssistChipDefaults.assistChipColors(
-                        leadingIconContentColor = androidx.compose.ui.graphics.Color(selectedWorkspace!!.color)
-                    ) else AssistChipDefaults.assistChipColors()
+                    onClick = { showDateTimePickerSheet = true },
+                    label = { Text(timeLabel) }
                 )
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Expanded Options (Visible/Scrolled to when dragged up, or just always present in column but below fold)
-            // In ModalBottomSheet, content is scrollable. 
-            
-            Text("Details", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
+            // Add reminder (Placeholder)
+            OptionRow(
+                icon = Icons.Default.Notifications,
+                text = "Add reminder",
+                onClick = { /* TODO */ }
             )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text("Priority", style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("None", "Low", "Medium", "High").forEachIndexed { index, label ->
-                    FilterChip(
-                        selected = priority == index,
-                        onClick = { priority = index },
-                        label = { Text(label) }
-                    )
-                }
+
+            // Priority
+            OptionRow(
+                icon = androidx.compose.material.icons.Icons.Default.Star, // Or outlined star
+                text = if (priority == 0) "Set priority" else "Priority: ${arrayOf("None", "Low", "Medium", "High")[priority]}",
+                onClick = { showPrioritySheet = true }
+            )
+
+            // Pin as notification (Placeholder)
+             Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 8.dp)
+            ) {
+                 // Checkbox needs import or full path
+                androidx.compose.material3.Checkbox(
+                    checked = false, 
+                    onCheckedChange = {}
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Pin as notification")
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = tags,
-                onValueChange = { tags = it },
-                label = { Text("Tags (comma separated)") },
-                modifier = Modifier.fillMaxWidth()
-            )
             
             Spacer(modifier = Modifier.height(32.dp))
         }
 
-        if (showDatePicker) {
-            val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDate)
-            DatePickerDialog(
-                onDismissRequest = { showDatePicker = false },
-                confirmButton = {
-                    TextButton(onClick = {
-                        datePickerState.selectedDateMillis?.let { date ->
-                            val calendar = Calendar.getInstance()
-                            val originalTime = Calendar.getInstance().apply { timeInMillis = selectedDate }
-                            calendar.timeInMillis = date
-                            calendar.set(Calendar.HOUR_OF_DAY, originalTime.get(Calendar.HOUR_OF_DAY))
-                            calendar.set(Calendar.MINUTE, originalTime.get(Calendar.MINUTE))
-                            selectedDate = calendar.timeInMillis
-                        }
-                        showDatePicker = false
-                    }) {
-                        Text("OK")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) {
-                        Text("Cancel")
-                    }
+        // Dialogs
+        if (showDateTimePickerSheet) {
+            DateTimePickerBottomSheet(
+                onDismiss = { showDateTimePickerSheet = false },
+                initialDate = selectedDate,
+                onDateSelected = { date ->
+                    selectedDate = date
                 }
-            ) {
-                DatePicker(state = datePickerState)
-            }
+            )
+        }
+        
+        if (showWorkspaceSheet) {
+            WorkspaceSelectionBottomSheet(
+                workspaces = workspaces,
+                onDismiss = { showWorkspaceSheet = false },
+                onWorkspaceSelected = { workspace ->
+                    selectedWorkspace = workspace
+                    showWorkspaceSheet = false
+                },
+                onCreateWorkspace = { name, color ->
+                    onAddWorkspace(name)
+                }
+            )
         }
 
-        if (showTimePicker) {
-            val calendar = Calendar.getInstance().apply { timeInMillis = selectedDate }
-            val timePickerState = rememberTimePickerState(
-                initialHour = calendar.get(Calendar.HOUR_OF_DAY),
-                initialMinute = calendar.get(Calendar.MINUTE)
+        if (showPrioritySheet) {
+            PrioritySelectionBottomSheet(
+                onDismiss = { showPrioritySheet = false },
+                currentPriority = priority,
+                onPrioritySelected = { newPriority ->
+                    priority = newPriority
+                    showPrioritySheet = false
+                }
             )
-
-            // TimePicker doesn't have a built-in dialog in M3, so wrapper might be needed
-            // For brevity using a basic AlertDialog or similar, same as TaskDialog logic
-             androidx.compose.material3.AlertDialog(
-                 onDismissRequest = { showTimePicker = false },
-                 confirmButton = {
-                     TextButton(onClick = {
-                         calendar.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
-                         calendar.set(Calendar.MINUTE, timePickerState.minute)
-                         selectedDate = calendar.timeInMillis
-                         showTimePicker = false
-                     }) {
-                         Text("OK")
-                     }
-                 },
-                 dismissButton = {
-                     TextButton(onClick = { showTimePicker = false }) {
-                         Text("Cancel")
-                     }
-                 },
-                 text = {
-                     TimePicker(state = timePickerState)
-                 }
-             )
         }
     }
 }

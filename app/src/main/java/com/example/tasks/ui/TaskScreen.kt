@@ -70,13 +70,14 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.example.tasks.data.TaskDraft
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskScreen(
     viewModel: TasksViewModel,
-    onNavigateToNewTask: () -> Unit,
+    onNavigateToNewTask: (TaskDraft?) -> Unit,
     onEditTask: (Task, List<com.example.tasks.data.ChecklistItem>) -> Unit
 ) {
     val globalTasks by viewModel.globalTasks.observeAsState(initial = emptyList())
@@ -260,9 +261,9 @@ fun TaskScreen(
                     val randomColor = (0xFF000000..0xFFFFFFFF).random() or 0xFF000000
                     viewModel.insertWorkspace(com.example.tasks.data.Workspace(name = name, color = randomColor))
                 },
-                onExpandToFull = {
+                onExpandToFull = { title, date, workspaceId, priority ->
                     showNewTaskSheet = false
-                    onNavigateToNewTask()
+                    onNavigateToNewTask(TaskDraft(title = title, deadline = date, workspaceId = workspaceId, priority = priority))
                 }
             )
         }

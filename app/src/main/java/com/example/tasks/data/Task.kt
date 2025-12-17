@@ -28,3 +28,12 @@ data class Task(
     val priority: Int = 0, // 0: None, 1: Low, 2: Medium, 3: High
     val tags: String = "" // Comma separated tags
 )
+
+data class TaskDraft(
+    val title: String = "",
+    val description: String = "",
+    val deadline: Long? = null,
+    val workspaceId: Int? = null,
+    val priority: Int = 0,
+    val tags: String = ""
+)

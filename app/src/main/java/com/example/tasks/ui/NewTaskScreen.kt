@@ -75,22 +75,25 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+import com.example.tasks.data.TaskDraft
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewTaskScreen(
     workspaces: List<Workspace>,
     taskToEdit: Task? = null,
+    draftTask: TaskDraft? = null,
     initialChecklist: List<ChecklistItem> = emptyList(),
     onNavigateBack: () -> Unit,
     onSave: (String, String, Long, Int?, Int, String, List<ChecklistItem>) -> Unit,
     onAddWorkspace: (String, Int) -> Unit
 ) {
-    var title by remember { mutableStateOf(taskToEdit?.title ?: "") }
-    var description by remember { mutableStateOf(taskToEdit?.description ?: "") }
-    var selectedDate by remember { mutableStateOf(taskToEdit?.deadline) } // Nullable to show "Today" option
-    var selectedWorkspace by remember { mutableStateOf(workspaces.find { it.id == taskToEdit?.workspaceId }) }
-    var priority by remember { mutableStateOf(taskToEdit?.priority ?: 0) }
-    var tags by remember { mutableStateOf(taskToEdit?.tags ?: "") }
+    var title by remember { mutableStateOf(taskToEdit?.title ?: draftTask?.title ?: "") }
+    var description by remember { mutableStateOf(taskToEdit?.description ?: draftTask?.description ?: "") }
+    var selectedDate by remember { mutableStateOf(taskToEdit?.deadline ?: draftTask?.deadline) } // Nullable to show "Today" option
+    var selectedWorkspace by remember { mutableStateOf(workspaces.find { it.id == (taskToEdit?.workspaceId ?: draftTask?.workspaceId) }) }
+    var priority by remember { mutableStateOf(taskToEdit?.priority ?: draftTask?.priority ?: 0) }
+    var tags by remember { mutableStateOf(taskToEdit?.tags ?: draftTask?.tags ?: "") }
     
     var showDateTimePickerSheet by remember { mutableStateOf(false) } // Unified sheet
     var showTip by remember { mutableStateOf(true) }
