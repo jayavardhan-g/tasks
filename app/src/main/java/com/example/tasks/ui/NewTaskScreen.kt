@@ -98,7 +98,7 @@ fun NewTaskScreen(
     var showDateTimePickerSheet by remember { mutableStateOf(false) } // Unified sheet
     var showTip by remember { mutableStateOf(true) }
     
-    var showPriorityDialog by remember { mutableStateOf(false) }
+    var showPrioritySheet by remember { mutableStateOf(false) }
     var showTagInput by remember { mutableStateOf(false) }
     var showWorkspaceSheet by remember { mutableStateOf(false) }
     var showChecklistSheet by remember { mutableStateOf(false) }
@@ -289,7 +289,7 @@ fun NewTaskScreen(
             OptionRow(
                 icon = Icons.Outlined.Star,
                 text = if (priority == 0) "Set priority" else "Priority: ${arrayOf("None", "Low", "Medium", "High")[priority]}",
-                onClick = { showPriorityDialog = true }
+                onClick = { showPrioritySheet = true }
             )
 
             // Checklist
@@ -375,30 +375,14 @@ fun NewTaskScreen(
         )
     }
     
-    if (showPriorityDialog) {
-        AlertDialog(
-            onDismissRequest = { showPriorityDialog = false },
-            title = { Text("Select Priority") },
-            text = {
-                Column {
-                    listOf("None", "Low", "Medium", "High").forEachIndexed { index, label ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    priority = index
-                                    showPriorityDialog = false
-                                }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                             // Icon for priority?
-                             Text(label)
-                        }
-                    }
-                }
-            },
-            confirmButton = {}
+    if (showPrioritySheet) {
+        PrioritySelectionBottomSheet(
+            onDismiss = { showPrioritySheet = false },
+            currentPriority = priority,
+            onPrioritySelected = { newPriority ->
+                priority = newPriority
+                showPrioritySheet = false
+            }
         )
     }
     
