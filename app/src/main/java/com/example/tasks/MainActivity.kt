@@ -20,11 +20,14 @@ import com.example.tasks.ui.theme.TasksTheme
 class MainActivity : ComponentActivity() {
 
     private val tasksViewModel: TasksViewModel by viewModels {
-        TasksViewModelFactory((application as TasksApplication).repository)
+        TasksViewModelFactory(application, (application as TasksApplication).repository)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        com.example.tasks.util.NotificationHelper.createNotificationChannel(this)
+
         setContent {
             TasksTheme {
                 TasksApp(viewModel = tasksViewModel)
@@ -66,14 +69,15 @@ fun TasksApp(viewModel: TasksViewModel) {
                 workspaces = workspaces,
                 draftTask = screen.draft,
                 onNavigateBack = { navigateTo(Screen.Home) },
-                onSave = { title, desc, deadline, workspaceId, priority, tags, checklistItems ->
+                onSave = { title, desc, deadline, workspaceId, priority, tags, checklistItems, pinAsNotification ->
                      val task = Task(
                         title = title,
                         description = desc,
                         deadline = deadline,
                         workspaceId = workspaceId,
                         priority = priority,
-                        tags = tags
+                        tags = tags,
+                        pinAsNotification = pinAsNotification
                     )
                     viewModel.insertTaskWithChecklist(task, checklistItems)
                     navigateTo(Screen.Home)
@@ -91,14 +95,15 @@ fun TasksApp(viewModel: TasksViewModel) {
                 taskToEdit = screen.task,
                 initialChecklist = screen.checklist,
                 onNavigateBack = { navigateTo(Screen.Home) },
-                onSave = { title, desc, deadline, workspaceId, priority, tags, checklistItems ->
+                onSave = { title, desc, deadline, workspaceId, priority, tags, checklistItems, pinAsNotification ->
                      val task = screen.task.copy(
                         title = title,
                         description = desc,
                         deadline = deadline,
                         workspaceId = workspaceId,
                         priority = priority,
-                        tags = tags
+                        tags = tags,
+                        pinAsNotification = pinAsNotification
                      )
                     viewModel.updateTaskWithChecklist(task, checklistItems)
                     navigateTo(Screen.Home)

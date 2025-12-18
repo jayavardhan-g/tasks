@@ -26,7 +26,8 @@ data class Task(
     val isCompleted: Boolean = false,
     val workspaceId: Int? = null,
     val priority: Int = 0, // 0: None, 1: Low, 2: Medium, 3: High
-    val tags: String = "" // Comma separated tags
+    val tags: String = "", // Comma separated tags
+    val pinAsNotification: Boolean = false
 )
 
 data class TaskDraft(
@@ -35,5 +36,6 @@ data class TaskDraft(
     val deadline: Long? = null,
     val workspaceId: Int? = null,
     val priority: Int = 0,
-    val tags: String = ""
+    val tags: String = "",
+    val pinAsNotification: Boolean = false
 )

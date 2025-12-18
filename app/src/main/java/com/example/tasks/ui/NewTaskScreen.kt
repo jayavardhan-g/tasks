@@ -85,7 +85,7 @@ fun NewTaskScreen(
     draftTask: TaskDraft? = null,
     initialChecklist: List<ChecklistItem> = emptyList(),
     onNavigateBack: () -> Unit,
-    onSave: (String, String, Long, Int?, Int, String, List<ChecklistItem>) -> Unit,
+    onSave: (String, String, Long, Int?, Int, String, List<ChecklistItem>, Boolean) -> Unit,
     onAddWorkspace: (String, Int) -> Unit
 ) {
     var title by remember { mutableStateOf(taskToEdit?.title ?: draftTask?.title ?: "") }
@@ -94,6 +94,7 @@ fun NewTaskScreen(
     var selectedWorkspace by remember { mutableStateOf(workspaces.find { it.id == (taskToEdit?.workspaceId ?: draftTask?.workspaceId) }) }
     var priority by remember { mutableStateOf(taskToEdit?.priority ?: draftTask?.priority ?: 0) }
     var tags by remember { mutableStateOf(taskToEdit?.tags ?: draftTask?.tags ?: "") }
+    var pinAsNotification by remember { mutableStateOf(taskToEdit?.pinAsNotification ?: draftTask?.pinAsNotification ?: false) }
     
     var showDateTimePickerSheet by remember { mutableStateOf(false) } // Unified sheet
     var showTip by remember { mutableStateOf(true) }
@@ -135,7 +136,7 @@ fun NewTaskScreen(
                         val finalDate = selectedDate ?: System.currentTimeMillis()
                         // Ensure basic validation
                         if (title.isNotBlank()) {
-                            onSave(title, description, finalDate, selectedWorkspace?.id, priority, tags, checklistItems.toList())
+                            onSave(title, description, finalDate, selectedWorkspace?.id, priority, tags, checklistItems.toList(), pinAsNotification)
                         } else {
                             // Maybe show toast? For now just don't save.
                         }
@@ -352,8 +353,8 @@ fun NewTaskScreen(
             // Pin Checkbox
             Row(verticalAlignment = Alignment.CenterVertically) {
                 androidx.compose.material3.Checkbox(
-                    checked = false, // Placeholder
-                    onCheckedChange = {}
+                    checked = pinAsNotification, 
+                    onCheckedChange = { pinAsNotification = it }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Pin as notification")

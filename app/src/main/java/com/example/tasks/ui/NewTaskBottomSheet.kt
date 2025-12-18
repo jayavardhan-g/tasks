@@ -64,15 +64,17 @@ import java.util.Locale
 fun NewTaskBottomSheet(
     workspaces: List<Workspace>,
     onDismiss: () -> Unit,
-    onSave: (String, String, Long, Int?, Int, String) -> Unit, // title, desc, deadline, workspaceId, priority, tags
+    onSave: (String, String, Long, Int?, Int, String, Boolean) -> Unit, // title, desc, deadline, workspaceId, priority, tags, pinAsNotification
     onAddWorkspace: (String) -> Unit,
-    onExpandToFull: (String, Long?, Int?, Int) -> Unit
+    onExpandToFull: (String, Long?, Int?, Int, Boolean) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf<Long?>(System.currentTimeMillis()) }
     var selectedWorkspace by remember { mutableStateOf<Workspace?>(null) }
     var priority by remember { mutableStateOf(0) }
     
+    var pinAsNotification by remember { mutableStateOf(false) }
+
     var showDatePicker by remember { mutableStateOf(false) } 
     var showDateTimePickerSheet by remember { mutableStateOf(false) } 
     var showWorkspaceSheet by remember { mutableStateOf(false) }
@@ -82,7 +84,7 @@ fun NewTaskBottomSheet(
         skipPartiallyExpanded = false,
         confirmValueChange = { newState ->
             if (newState == androidx.compose.material3.SheetValue.Expanded) {
-                onExpandToFull(title, selectedDate, selectedWorkspace?.id, priority)
+                onExpandToFull(title, selectedDate, selectedWorkspace?.id, priority, pinAsNotification)
                 false // Don't snap to expanded visually, just navigate
             } else {
                 true
@@ -130,7 +132,7 @@ fun NewTaskBottomSheet(
                 IconButton(
                     onClick = { 
                         if (title.isNotBlank()) {
-                            onSave(title, "", selectedDate ?: System.currentTimeMillis(), selectedWorkspace?.id, priority, "")
+                            onSave(title, "", selectedDate ?: System.currentTimeMillis(), selectedWorkspace?.id, priority, "", pinAsNotification)
                         }
                     },
                     enabled = title.isNotBlank()
@@ -194,8 +196,8 @@ fun NewTaskBottomSheet(
             ) {
                  // Checkbox needs import or full path
                 androidx.compose.material3.Checkbox(
-                    checked = false, 
-                    onCheckedChange = {}
+                    checked = pinAsNotification, 
+                    onCheckedChange = { pinAsNotification = it }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Pin as notification")

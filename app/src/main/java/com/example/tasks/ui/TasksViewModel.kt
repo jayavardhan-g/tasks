@@ -16,14 +16,19 @@ import com.example.tasks.data.Workspace
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 
-class TasksViewModel(private val repository: TasksRepository) : ViewModel() {
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+
+class TasksViewModel(
+    application: Application,
+    private val repository: TasksRepository
+) : AndroidViewModel(application) {
 
     val workspaces: LiveData<List<Workspace>> = repository.allWorkspaces.asLiveData()
     
     private val _currentWorkspaceId = MutableLiveData<Int>(-1)
     val currentWorkspaceId: LiveData<Int> = _currentWorkspaceId
 
-    // For Workspace Tab (Filtered)
     // For Workspace Tab (Filtered)
     val filteredTasks: LiveData<List<com.example.tasks.data.TaskWithChecklist>> = _currentWorkspaceId.switchMap { id ->
         if (id == -1) { // -1 represents "All" in the workspace tab
@@ -41,15 +46,25 @@ class TasksViewModel(private val repository: TasksRepository) : ViewModel() {
     }
 
     fun insert(task: Task) = viewModelScope.launch {
-        repository.insert(task)
+        val id = repository.insert(task)
+        if (task.pinAsNotification && !task.isCompleted) {
+             com.example.tasks.util.NotificationHelper.showTaskNotification(getApplication(), task.copy(id = id.toInt()))
+        }
     }
 
     fun update(task: Task) = viewModelScope.launch {
         repository.update(task)
+        val context = getApplication<Application>()
+        if (task.pinAsNotification && !task.isCompleted) {
+             com.example.tasks.util.NotificationHelper.showTaskNotification(context, task)
+        } else {
+             com.example.tasks.util.NotificationHelper.cancelTaskNotification(context, task.id)
+        }
     }
 
     fun delete(task: Task) = viewModelScope.launch {
         repository.delete(task)
+        com.example.tasks.util.NotificationHelper.cancelTaskNotification(getApplication(), task.id)
     }
 
     fun insertWorkspace(workspace: Workspace) = viewModelScope.launch {
@@ -88,6 +103,7 @@ class TasksViewModel(private val repository: TasksRepository) : ViewModel() {
              val items = repository.getChecklistForTask(taskId).first()
              if (items.isNotEmpty() && items.all { it.isCompleted }) {
                  repository.updateTaskStatus(taskId, true)
+                 com.example.tasks.util.NotificationHelper.cancelTaskNotification(getApplication(), taskId)
              }
          } catch (e: Exception) {
              // Handle empty flow or errors
@@ -99,10 +115,21 @@ class TasksViewModel(private val repository: TasksRepository) : ViewModel() {
         items.forEach { item ->
             repository.insertChecklistItem(item.copy(taskId = taskId.toInt()))
         }
+        
+        if (task.pinAsNotification && !task.isCompleted) {
+             com.example.tasks.util.NotificationHelper.showTaskNotification(getApplication(), task.copy(id = taskId.toInt()))
+        }
     }
 
     fun updateTaskWithChecklist(task: Task, items: List<com.example.tasks.data.ChecklistItem>) = viewModelScope.launch {
         repository.update(task)
+        
+        val context = getApplication<Application>()
+        if (task.pinAsNotification && !task.isCompleted) {
+             com.example.tasks.util.NotificationHelper.showTaskNotification(context, task)
+        } else {
+             com.example.tasks.util.NotificationHelper.cancelTaskNotification(context, task.id)
+        }
         
         // Sync checklist:
         // 1. Get current DB items
@@ -132,11 +159,11 @@ class TasksViewModel(private val repository: TasksRepository) : ViewModel() {
     }
 }
 
-class TasksViewModelFactory(private val repository: TasksRepository) : ViewModelProvider.Factory {
+class TasksViewModelFactory(private val application: Application, private val repository: TasksRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TasksViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return TasksViewModel(repository) as T
+            return TasksViewModel(application, repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
