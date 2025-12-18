@@ -66,10 +66,11 @@ fun NewTaskBottomSheet(
     onDismiss: () -> Unit,
     onSave: (String, String, Long, Int?, Int, String, Boolean) -> Unit, // title, desc, deadline, workspaceId, priority, tags, pinAsNotification
     onAddWorkspace: (String) -> Unit,
-    onExpandToFull: (String, Long?, Int?, Int, Boolean) -> Unit
+    onExpandToFull: (String, Long?, Int?, Int, Boolean) -> Unit,
+    initialDate: Long? = null
 ) {
     var title by remember { mutableStateOf("") }
-    var selectedDate by remember { mutableStateOf<Long?>(System.currentTimeMillis()) }
+    var selectedDate by remember { mutableStateOf<Long?>(initialDate ?: System.currentTimeMillis()) }
     var selectedWorkspace by remember { mutableStateOf<Workspace?>(null) }
     var priority by remember { mutableStateOf(0) }
     

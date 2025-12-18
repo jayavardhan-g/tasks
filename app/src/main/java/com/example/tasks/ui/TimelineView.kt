@@ -66,35 +66,91 @@ fun TimelineView(
     onAddTask: (Date) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val groupedTasks = remember(tasksWithChecklists) {
-        tasksWithChecklists.sortedBy { it.task.deadline }.groupBy {
+    val (tasksWithDeadlines, unplannedTasks) = remember(tasksWithChecklists) {
+        tasksWithChecklists.partition { it.task.deadline != 0L }
+    }
+
+    val groupedTasks = remember(tasksWithDeadlines) {
+        tasksWithDeadlines.sortedBy { it.task.deadline }.groupBy {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             dateFormat.format(Date(it.task.deadline))
         }
+    }
+
+    val dateList = remember(tasksWithDeadlines) {
+        val calendar = Calendar.getInstance()
+        val now = calendar.timeInMillis
+        
+        // Find earliest and latest deadlines
+        val earliest = tasksWithDeadlines.minOfOrNull { it.task.deadline } ?: now
+        val latest = tasksWithDeadlines.maxOfOrNull { it.task.deadline } ?: now
+        
+        // Start Date: earlier of (Today - 1 month) or Earliest Deadline
+        calendar.timeInMillis = now
+        calendar.add(Calendar.MONTH, -1)
+        val oneMonthAgo = calendar.timeInMillis
+        val startTime = minOf(earliest, oneMonthAgo)
+        
+        // End Date: later of (Latest Deadline + 1 week) or (Today + 15 days)
+        calendar.timeInMillis = latest
+        calendar.add(Calendar.DAY_OF_YEAR, 7)
+        val latestPlusWeek = calendar.timeInMillis
+        
+        calendar.timeInMillis = now
+        calendar.add(Calendar.DAY_OF_YEAR, 15)
+        val fifteenDaysFromNow = calendar.timeInMillis
+        val endTime = maxOf(latestPlusWeek, fifteenDaysFromNow)
+        
+        // Generate list of dates
+        val list = mutableListOf<String>()
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        
+        val current = Calendar.getInstance().apply { timeInMillis = startTime }
+        val end = Calendar.getInstance().apply { timeInMillis = endTime }
+        
+        // Normalize to midnight for comparison
+        current.set(Calendar.HOUR_OF_DAY, 0)
+        current.set(Calendar.MINUTE, 0)
+        current.set(Calendar.SECOND, 0)
+        current.set(Calendar.MILLISECOND, 0)
+        
+        end.set(Calendar.HOUR_OF_DAY, 0)
+        end.set(Calendar.MINUTE, 0)
+        end.set(Calendar.SECOND, 0)
+        end.set(Calendar.MILLISECOND, 0)
+        
+        while (!current.after(end)) {
+            list.add(dateFormat.format(current.time))
+            current.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        list
     }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)
     ) {
-        for ((dateString, tasksForDate) in groupedTasks) {
+        // 1. Timeline for Dates
+        dateList.forEach { dateString ->
             val parseFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             val date = parseFormat.parse(dateString) ?: Date()
             val today = Calendar.getInstance()
             val headerDate = Calendar.getInstance().apply { time = date }
             val isToday = today.get(Calendar.YEAR) == headerDate.get(Calendar.YEAR) &&
                          today.get(Calendar.DAY_OF_YEAR) == headerDate.get(Calendar.DAY_OF_YEAR)
+            
+            val tasksForDate = groupedTasks[dateString] ?: emptyList()
 
-            item {
+            item(key = "header_$dateString") {
                 TimelineHeader(dateString = dateString, isToday = isToday)
             }
             
             if (isToday) {
                 val now = System.currentTimeMillis()
-                val overdueCount = tasksWithChecklists.count { !it.task.isCompleted && it.task.deadline < now }
-                val unplannedCount = tasksWithChecklists.count { it.task.deadline == 0L }
+                val overdueCount = tasksWithChecklists.count { !it.task.isCompleted && it.task.deadline != 0L && it.task.deadline < now }
+                val unplannedCount = unplannedTasks.count { !it.task.isCompleted }
                 
-                item {
+                item(key = "summary_$dateString") {
                     SummaryCards(
                         todoCount = tasksForDate.count { !it.task.isCompleted },
                         overdueCount = overdueCount,
@@ -103,13 +159,13 @@ fun TimelineView(
                 }
             }
 
-            itemsIndexed(tasksForDate) { index, taskWithChecklist ->
+            itemsIndexed(tasksForDate, key = { _, taskWithChecklist -> taskWithChecklist.task.id!! }) { index, taskWithChecklist ->
                 val task = taskWithChecklist.task
                 val workspace = if (task.workspaceId != null) workspaces[task.workspaceId] else null
                 TimelineTaskItem(
                     task = task,
                     checklist = taskWithChecklist.checklist,
-                    isLast = false, // We'll have an "Add task" item after this
+                    isLast = false,
                     workspaceName = workspace?.name,
                     workspaceColor = workspace?.color,
                     onCheckedChange = onCheckedChange,
@@ -119,10 +175,47 @@ fun TimelineView(
                 )
             }
             
-            item {
+            item(key = "add_$dateString") {
                 TimelineAddTaskRow(
                     date = date,
                     isToday = isToday,
+                    onAddTask = onAddTask
+                )
+            }
+        }
+        
+        // 2. Unplanned Section
+        if (unplannedTasks.isNotEmpty()) {
+            item(key = "unplanned_header") {
+                Text(
+                    text = "Unplanned",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+            }
+            
+            itemsIndexed(unplannedTasks, key = { _, taskWithChecklist -> taskWithChecklist.task.id!! }) { index, taskWithChecklist ->
+                val task = taskWithChecklist.task
+                val workspace = if (task.workspaceId != null) workspaces[task.workspaceId] else null
+                TimelineTaskItem(
+                    task = task,
+                    checklist = taskWithChecklist.checklist,
+                    isLast = index == unplannedTasks.size - 1,
+                    workspaceName = workspace?.name,
+                    workspaceColor = workspace?.color,
+                    onCheckedChange = onCheckedChange,
+                    onChecklistItemChange = onChecklistItemChange,
+                    onDelete = onDelete,
+                    onEdit = onEdit
+                )
+            }
+            
+            item(key = "add_unplanned") {
+                TimelineAddTaskRow(
+                    date = Date(0), // Using 0 to indicate no deadline
+                    isToday = false,
                     onAddTask = onAddTask
                 )
             }

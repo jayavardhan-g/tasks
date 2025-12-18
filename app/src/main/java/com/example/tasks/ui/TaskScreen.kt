@@ -91,6 +91,7 @@ fun TaskScreen(
     val currentWorkspaceId by viewModel.currentWorkspaceId.observeAsState()
 
     var showNewTaskSheet by remember { mutableStateOf(false) }
+    var newTaskInitialDate by remember { mutableStateOf<Long?>(null) }
     var showAddWorkspaceDialog by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Timeline, 1 = Workspace
 
@@ -179,8 +180,8 @@ fun TaskScreen(
                         onEditTask(task, matchingItem?.checklist ?: emptyList())
                     },
                     onAddTask = { date ->
+                        newTaskInitialDate = if (date.time == 0L) null else date.time
                         showNewTaskSheet = true
-                        // Ideally pre-fill date, but for now just open sheet
                     }
                 )
             } else {
@@ -252,6 +253,7 @@ fun TaskScreen(
                                 onEditTask(task, matchingItem?.checklist ?: emptyList())
                             },
                             onAddTask = { date ->
+                                newTaskInitialDate = if (date.time == 0L) null else date.time
                                 showNewTaskSheet = true
                             }
                         )
@@ -276,7 +278,10 @@ fun TaskScreen(
         if (showNewTaskSheet) {
             NewTaskBottomSheet(
                 workspaces = workspaces,
-                onDismiss = { showNewTaskSheet = false },
+                onDismiss = { 
+                    showNewTaskSheet = false
+                    newTaskInitialDate = null
+                },
                 onSave = { title, desc, deadline, workspaceId, priority, tags, pinAsNotification ->
                     val task = Task(
                         title = title,
@@ -290,6 +295,7 @@ fun TaskScreen(
                     // For now empty checklist for new simple tasks
                     viewModel.insertTaskWithChecklist(task, emptyList())
                     showNewTaskSheet = false
+                    newTaskInitialDate = null
                 },
                 onAddWorkspace = { name ->
                     val randomColor = (0xFF000000..0xFFFFFFFF).random() or 0xFF000000
@@ -297,8 +303,10 @@ fun TaskScreen(
                 },
                 onExpandToFull = { title, date, workspaceId, priority, pinAsNotification ->
                     showNewTaskSheet = false
+                    newTaskInitialDate = null
                     onNavigateToNewTask(TaskDraft(title = title, deadline = date, workspaceId = workspaceId, priority = priority, pinAsNotification = pinAsNotification))
-                }
+                },
+                initialDate = newTaskInitialDate
             )
         }
     }
