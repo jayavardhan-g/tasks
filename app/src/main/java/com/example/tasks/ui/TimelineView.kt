@@ -16,6 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.foundation.background
@@ -50,6 +55,7 @@ import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Add
 import com.example.tasks.data.Task
 import com.example.tasks.ui.components.SummaryCards
+import com.example.tasks.ui.components.CalendarStrip
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -66,6 +72,7 @@ fun TimelineView(
     onAddTask: (Date) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val scope = rememberCoroutineScope()
     val (tasksWithDeadlines, unplannedTasks) = remember(tasksWithChecklists) {
         tasksWithChecklists.partition { it.task.deadline != 0L }
     }
@@ -126,10 +133,28 @@ fun TimelineView(
         list
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp)
-    ) {
+    val listState = rememberLazyListState()
+    
+    val todayIndex = remember(dateList, groupedTasks) {
+        calculateIndexForDate(
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+            dateList,
+            groupedTasks
+        )
+    }
+
+    LaunchedEffect(todayIndex) {
+        if (todayIndex > 0) {
+            listState.scrollToItem(todayIndex)
+        }
+    }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(16.dp)
+        ) {
         // 1. Timeline for Dates
         dateList.forEach { dateString ->
             val parseFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -221,7 +246,42 @@ fun TimelineView(
             }
         }
     }
+        
+        CalendarStrip(
+            onDateSelected = { dateStr ->
+                val index = calculateIndexForDate(dateStr, dateList, groupedTasks)
+                scope.launch {
+                    listState.animateScrollToItem(index)
+                }
+            }
+        )
+    }
 }
+
+private fun calculateIndexForDate(
+    targetDate: String,
+    dateList: List<String>,
+    groupedTasks: Map<String, List<com.example.tasks.data.TaskWithChecklist>>
+): Int {
+    var index = 0
+    val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    for (dateStr in dateList) {
+        if (dateStr == targetDate) {
+            break
+        }
+        val tasksForDate = groupedTasks[dateStr] ?: emptyList()
+        index += 1 // Header
+        
+        if (dateStr == todayStr) {
+            index += 1 // SummaryCards
+        }
+        
+        index += tasksForDate.size // Tasks
+        index += 1 // Add Task Row
+    }
+    return index
+}
+
 
 @Composable
 fun TimelineHeader(dateString: String, isToday: Boolean) {

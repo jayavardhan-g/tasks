@@ -75,7 +75,6 @@ import java.util.Calendar
 import java.util.Date
 import java.util.*
 import com.example.tasks.data.TaskDraft
-import com.example.tasks.ui.components.CalendarStrip
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -105,7 +104,7 @@ fun TaskScreen(
                 title = { 
                     if (selectedTab == 0) {
                         Text(
-                            "Taskito",
+                            "Tasks",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -134,23 +133,19 @@ fun TaskScreen(
             )
         },
         bottomBar = {
-            if (selectedTab == 0) {
-                CalendarStrip()
-            } else {
-                NavigationBar {
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.DateRange, contentDescription = "Timeline") },
-                        label = { Text("Timeline") },
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.List, contentDescription = "Workspaces") },
-                        label = { Text("Workspaces") },
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 }
-                    )
-                }
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.DateRange, contentDescription = "Timeline") },
+                    label = { Text("Timeline") },
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.List, contentDescription = "Workspaces") },
+                    label = { Text("Workspaces") },
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 }
+                )
             }
         },
         floatingActionButton = {
