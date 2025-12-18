@@ -70,6 +70,7 @@ fun TimelineView(
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit,
     onAddTask: (Date) -> Unit,
+    scrollToTaskId: Int? = null,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -146,6 +147,15 @@ fun TimelineView(
     LaunchedEffect(todayIndex) {
         if (todayIndex > 0) {
             listState.scrollToItem(todayIndex)
+        }
+    }
+
+    LaunchedEffect(scrollToTaskId) {
+        if (scrollToTaskId != null) {
+            val index = calculateIndexForTaskId(scrollToTaskId, dateList, groupedTasks)
+            if (index != -1) {
+                listState.animateScrollToItem(index)
+            }
         }
     }
 
@@ -280,6 +290,31 @@ private fun calculateIndexForDate(
         index += 1 // Add Task Row
     }
     return index
+}
+
+private fun calculateIndexForTaskId(
+    targetId: Int,
+    dateList: List<String>,
+    groupedTasks: Map<String, List<com.example.tasks.data.TaskWithChecklist>>
+): Int {
+    var index = 0
+    val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    for (dateStr in dateList) {
+        val tasksForDate = groupedTasks[dateStr] ?: emptyList()
+        val taskIndex = tasksForDate.indexOfFirst { it.task.id == targetId }
+        
+        if (taskIndex != -1) {
+            return index + 1 + (if (dateStr == todayStr) 1 else 0) + taskIndex
+        }
+        
+        index += 1 // Header
+        if (dateStr == todayStr) {
+            index += 1 // SummaryCards
+        }
+        index += tasksForDate.size // Tasks
+        index += 1 // Add Task Row
+    }
+    return -1
 }
 
 

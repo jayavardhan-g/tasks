@@ -9,12 +9,15 @@ import com.example.tasks.data.Task
 import com.example.tasks.data.TasksRepository
 import kotlinx.coroutines.launch
 
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.asFlow
-import androidx.lifecycle.switchMap
-import com.example.tasks.data.Workspace
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
+import com.example.tasks.data.Workspace
+import com.example.tasks.data.ChecklistItem
+import com.example.tasks.data.TaskWithChecklist
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -26,20 +29,57 @@ class TasksViewModel(
 
     val workspaces: LiveData<List<Workspace>> = repository.allWorkspaces.asLiveData()
     
-    private val _currentWorkspaceId = MutableLiveData<Int>(-1)
-    val currentWorkspaceId: LiveData<Int> = _currentWorkspaceId
+    private val _currentWorkspaceId = MutableStateFlow(-1)
+    val currentWorkspaceId: LiveData<Int> = _currentWorkspaceId.asLiveData()
 
-    // For Workspace Tab (Filtered)
-    val filteredTasks: LiveData<List<com.example.tasks.data.TaskWithChecklist>> = _currentWorkspaceId.switchMap { id ->
-        if (id == -1) { // -1 represents "All" in the workspace tab
-             repository.allTasks.asLiveData()
-        } else {
-             repository.getTasksByWorkspace(id).asLiveData()
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _currentMatchIndex = MutableStateFlow(0)
+    val currentMatchIndex: StateFlow<Int> = _currentMatchIndex.asStateFlow()
+
+    // For Workspace Tab (Full)
+    val filteredTasks: LiveData<List<com.example.tasks.data.TaskWithChecklist>> = 
+        _currentWorkspaceId.flatMapLatest { id ->
+            if (id == -1) repository.allTasks else repository.getTasksByWorkspace(id)
+        }.asLiveData()
+
+    // For Timeline Tab (Full)
+    val globalTasks: LiveData<List<com.example.tasks.data.TaskWithChecklist>> = 
+        repository.allTasks.asLiveData()
+
+    // List of task IDs matching the search query in the current context
+    val matches: LiveData<List<Int>> = combine(
+        _searchQuery,
+        _currentWorkspaceId.flatMapLatest { id ->
+            if (id == -1) repository.allTasks else repository.getTasksByWorkspace(id)
+        }
+    ) { query, tasks ->
+        if (query.isBlank()) emptyList()
+        else tasks.filter {
+            it.task.title.contains(query, ignoreCase = true) ||
+            it.task.description.contains(query, ignoreCase = true)
+        }.map { it.task.id }
+    }.asLiveData()
+
+    fun navigateNextMatch() {
+        val count = matches.value?.size ?: 0
+        if (count > 0) {
+            _currentMatchIndex.value = (_currentMatchIndex.value + 1) % count
         }
     }
 
-    // For Timeline Tab (Global)
-    val globalTasks: LiveData<List<com.example.tasks.data.TaskWithChecklist>> = repository.allTasks.asLiveData()
+    fun navigatePreviousMatch() {
+        val count = matches.value?.size ?: 0
+        if (count > 0) {
+            _currentMatchIndex.value = (_currentMatchIndex.value - 1 + count) % count
+        }
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+        _currentMatchIndex.value = 0
+    }
 
     fun setWorkspace(workspaceId: Int) {
         _currentWorkspaceId.value = workspaceId
@@ -145,14 +185,14 @@ class TasksViewModel(
         val updatedIds = updatedItems.map { it.id }.toSet()
         val deletedItems = currentItems.filter { it.id !in updatedIds }
         
-        newItems.forEach { 
-            repository.insertChecklistItem(it.copy(taskId = task.id)) 
+        for (item in newItems) {
+            repository.insertChecklistItem(item.copy(taskId = task.id))
         }
-        updatedItems.forEach { 
-            repository.updateChecklistItem(it) 
+        for (item in updatedItems) {
+            repository.updateChecklistItem(item)
         }
-        deletedItems.forEach { 
-            repository.deleteChecklistItem(it) 
+        for (item in deletedItems) {
+            repository.deleteChecklistItem(item)
         }
         
         checkTaskCompletion(task.id)

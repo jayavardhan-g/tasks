@@ -28,6 +28,10 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -52,10 +56,10 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerState
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +74,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.tasks.data.Task
+import com.example.tasks.data.Workspace
+import com.example.tasks.data.TaskWithChecklist
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -93,6 +99,10 @@ fun TaskScreen(
     var newTaskInitialDate by remember { mutableStateOf<Long?>(null) }
     var showAddWorkspaceDialog by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Timeline, 1 = Workspace
+    var isSearchActive by remember { mutableStateOf(false) }
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val matches by viewModel.matches.observeAsState(initial = emptyList())
+    val currentMatchIndex by viewModel.currentMatchIndex.collectAsState()
 
     val workspacesMap = remember(workspaces) {
         workspaces.associateBy { it.id }
@@ -100,37 +110,88 @@ fun TaskScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { 
-                    if (selectedTab == 0) {
-                        Text(
-                            "Tasks",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
+            if (isSearchActive) {
+                TopAppBar(
+                    title = {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { viewModel.setSearchQuery(it) },
+                            placeholder = { Text("Search tasks...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = TextFieldDefaults.outlinedTextFieldColors(
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                                cursorColor = Color.Black
+                            )
                         )
-                    } else {
-                        Text("Workspaces")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = Color.Black
-                ),
-                actions = {
-                    if (selectedTab == 0) {
-                        IconButton(onClick = { /* Search */ }) {
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { 
+                            isSearchActive = false 
+                            viewModel.setSearchQuery("")
+                        }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        if (searchQuery.isNotEmpty()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (matches.isEmpty()) "0/0" else "${currentMatchIndex + 1}/${matches.size}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                                IconButton(onClick = { viewModel.navigatePreviousMatch() }) {
+                                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Previous Match")
+                                }
+                                IconButton(onClick = { viewModel.navigateNextMatch() }) {
+                                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Next Match")
+                                }
+                                IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear")
+                                }
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White,
+                        titleContentColor = Color.Black
+                    )
+                )
+            } else {
+                TopAppBar(
+                    title = { 
+                        if (selectedTab == 0) {
+                            Text(
+                                "Tasks",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Text("Workspaces")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.Black
+                    ),
+                    actions = {
+                        IconButton(onClick = { isSearchActive = true }) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
                         }
-                        IconButton(onClick = { /* More */ }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
-                        }
-                    } else if (selectedTab == 1) {
-                        IconButton(onClick = { showAddWorkspaceDialog = true }) {
-                            Icon(Icons.Default.Add, contentDescription = "Add Workspace")
+                        if (selectedTab == 0) {
+                            IconButton(onClick = { /* More */ }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            }
+                        } else if (selectedTab == 1) {
+                            IconButton(onClick = { showAddWorkspaceDialog = true }) {
+                                Icon(Icons.Default.Add, contentDescription = "Add Workspace")
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             NavigationBar {
@@ -177,7 +238,8 @@ fun TaskScreen(
                     onAddTask = { date ->
                         newTaskInitialDate = if (date.time == 0L) null else date.time
                         showNewTaskSheet = true
-                    }
+                    },
+                    scrollToTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
                 )
             } else {
                 // ... (Workspace Tab logic to be updated similarly)
@@ -189,7 +251,7 @@ fun TaskScreen(
                     ) {
                         item {
                             FilterChip(
-                                selected = currentWorkspaceId == -1 || currentWorkspaceId == null,
+                                selected = (currentWorkspaceId ?: -1) == -1,
                                 onClick = { viewModel.setWorkspace(-1) },
                                 label = { Text("All") },
                                 leadingIcon = { 
@@ -244,13 +306,14 @@ fun TaskScreen(
                                 viewModel.delete(task)
                             },
                             onEdit = { task ->
-                                val matchingItem = globalTasks.find { it.task.id == task.id }
+                                val matchingItem = filteredTasks.find { it.task.id == task.id }
                                 onEditTask(task, matchingItem?.checklist ?: emptyList())
                             },
                             onAddTask = { date ->
                                 newTaskInitialDate = if (date.time == 0L) null else date.time
                                 showNewTaskSheet = true
-                            }
+                            },
+                            scrollToTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
                         )
                     }
                 }
