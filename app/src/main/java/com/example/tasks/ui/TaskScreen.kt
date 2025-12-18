@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.MoreVert
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -64,13 +66,16 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.tasks.data.Task
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.util.Locale
+import java.util.*
 import com.example.tasks.data.TaskDraft
+import com.example.tasks.ui.components.CalendarStrip
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,13 +101,30 @@ fun TaskScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (selectedTab == 0) "Timeline" else "Workspaces") },
+                title = { 
+                    if (selectedTab == 0) {
+                        Text(
+                            "Taskito",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Text("Workspaces")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.Black
                 ),
                 actions = {
-                    if (selectedTab == 1) {
+                    if (selectedTab == 0) {
+                        IconButton(onClick = { /* Search */ }) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
+                        IconButton(onClick = { /* More */ }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                        }
+                    } else if (selectedTab == 1) {
                         IconButton(onClick = { showAddWorkspaceDialog = true }) {
                             Icon(Icons.Default.Add, contentDescription = "Add Workspace")
                         }
@@ -111,19 +133,23 @@ fun TaskScreen(
             )
         },
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.DateRange, contentDescription = "Timeline") },
-                    label = { Text("Timeline") },
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.List, contentDescription = "Workspaces") },
-                    label = { Text("Workspaces") },
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 }
-                )
+            if (selectedTab == 0) {
+                CalendarStrip()
+            } else {
+                NavigationBar {
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.DateRange, contentDescription = "Timeline") },
+                        label = { Text("Timeline") },
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.List, contentDescription = "Workspaces") },
+                        label = { Text("Workspaces") },
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 }
+                    )
+                }
             }
         },
         floatingActionButton = {
@@ -151,6 +177,10 @@ fun TaskScreen(
                         // find checklist from globalTasks? globalTasks is TaskWithChecklist
                         val matchingItem = globalTasks.find { it.task.id == task.id }
                         onEditTask(task, matchingItem?.checklist ?: emptyList())
+                    },
+                    onAddTask = { date ->
+                        showNewTaskSheet = true
+                        // Ideally pre-fill date, but for now just open sheet
                     }
                 )
             } else {
@@ -220,6 +250,9 @@ fun TaskScreen(
                             onEdit = { task ->
                                 val matchingItem = globalTasks.find { it.task.id == task.id }
                                 onEditTask(task, matchingItem?.checklist ?: emptyList())
+                            },
+                            onAddTask = { date ->
+                                showNewTaskSheet = true
                             }
                         )
                     }
