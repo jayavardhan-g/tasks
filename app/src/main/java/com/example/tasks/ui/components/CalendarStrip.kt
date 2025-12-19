@@ -3,15 +3,24 @@ package com.example.tasks.ui.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,14 +32,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarStrip(
     modifier: Modifier = Modifier,
@@ -43,6 +54,10 @@ fun CalendarStrip(
     var currentMonthYear by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf(Calendar.getInstance()) }
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+    val sheetState = rememberModalBottomSheetState()
 
     // Update month/year header when page changes
     LaunchedEffect(pagerState.currentPage) {
@@ -56,13 +71,32 @@ fun CalendarStrip(
         modifier = modifier
             .fillMaxWidth()
             .background(Color.White)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { change, dragAmount ->
+                    if (dragAmount < -10) { // Swiped up
+                        showDatePicker = true
+                    }
+                }
+            }
     ) {
         androidx.compose.material3.Divider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
-        Spacer(modifier = Modifier.height(4.dp))
+        
+        // Drag Handle
+        Box(
+            modifier = Modifier
+                .padding(top = 4.dp)
+                .size(width = 30.dp, height = 4.dp)
+                .clip(CircleShape)
+                .background(Color.LightGray.copy(alpha = 0.4f))
+                .align(Alignment.CenterHorizontally)
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .clickable { showDatePicker = true }
+                .padding(horizontal = 16.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -110,6 +144,43 @@ fun CalendarStrip(
                             onDateSelected(dateFormat.format(date.time))
                         }
                     )
+                }
+            }
+        }
+    }
+
+    if (showDatePicker) {
+        ModalBottomSheet(
+            onDismissRequest = { showDatePicker = false },
+            sheetState = sheetState,
+            containerColor = Color.White
+        ) {
+            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+                DatePicker(
+                    state = datePickerState,
+                    showModeToggle = false,
+                    title = null,
+                    headline = null
+                )
+                
+                LaunchedEffect(datePickerState.selectedDateMillis) {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { 
+                            timeInMillis = millis 
+                        }
+                        
+                        val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        outputFormat.timeZone = TimeZone.getTimeZone("UTC")
+                        val dateStr = outputFormat.format(Date(millis))
+                        
+                        val localCal = Calendar.getInstance().apply {
+                            set(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH))
+                        }
+                        selectedDate = localCal
+                        
+                        onDateSelected(dateStr)
+                        showDatePicker = false
+                    }
                 }
             }
         }
