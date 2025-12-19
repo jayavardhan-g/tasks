@@ -63,7 +63,6 @@ fun CalendarStrip(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -71,12 +70,6 @@ fun CalendarStrip(
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
-            )
-            Icon(
-                Icons.Default.KeyboardArrowUp,
-                contentDescription = "Expand Calendar",
-                modifier = Modifier.size(16.dp),
-                tint = Color.LightGray
             )
         }
         
