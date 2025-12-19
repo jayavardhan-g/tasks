@@ -55,29 +55,32 @@ fun CalendarStrip(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.White) // Changed to white to match the new design
-            .padding(vertical = 8.dp)
+            .background(Color.White)
     ) {
+        androidx.compose.material3.Divider(color = Color.LightGray.copy(alpha = 0.3f), thickness = 0.5.dp)
+        Spacer(modifier = Modifier.height(4.dp))
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-             Text(
+            Text(
                 text = currentMonthYear,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
             Icon(
                 Icons.Default.KeyboardArrowUp,
                 contentDescription = "Expand Calendar",
-                modifier = Modifier.size(20.dp),
-                tint = Color.Gray
+                modifier = Modifier.size(16.dp),
+                tint = Color.LightGray
             )
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         
         HorizontalPager(
             state = pagerState,
@@ -95,8 +98,8 @@ fun CalendarStrip(
             }
             
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceAround
             ) {
                 val days = listOf("S", "M", "T", "W", "T", "F", "S")
                 
@@ -135,25 +138,26 @@ fun CalendarDay(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = Modifier
-            .width(48.dp)
+            .width(40.dp)
             .clickable { onClick() }
     ) {
         Text(
             text = dayLetter,
             style = MaterialTheme.typography.labelSmall,
-            color = if (isSelected) Color(0xFF0056B3) else Color.Gray
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) Color(0xFF0056B3) else Color.LightGray
         )
         
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
+                .size(32.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
                 .background(
                     when {
                         isSelected -> Color(0xFF0056B3)
-                        isToday -> Color(0xFFE8F0F8)
+                        isToday -> Color(0xFFF0F5FA)
                         else -> Color.Transparent
                     }
                 ),
@@ -161,8 +165,8 @@ fun CalendarDay(
         ) {
             Text(
                 text = date.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Medium,
                 color = when {
                     isSelected -> Color.White
                     isToday -> Color(0xFF0056B3)

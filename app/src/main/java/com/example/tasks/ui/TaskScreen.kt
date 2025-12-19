@@ -218,7 +218,10 @@ fun TaskScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showNewTaskSheet = true }) {
+            FloatingActionButton(
+                onClick = { showNewTaskSheet = true },
+                modifier = Modifier.padding(bottom = 80.dp)
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Task")
             }
         }
