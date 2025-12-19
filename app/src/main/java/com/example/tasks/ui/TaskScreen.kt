@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -81,6 +84,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.*
 import com.example.tasks.data.TaskDraft
+import com.example.tasks.ui.components.WorkspaceProgressCard
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -169,7 +173,11 @@ fun TaskScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         } else {
-                            Text("Workspaces")
+                            Text(
+                                "Workspace Progress",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -242,79 +250,34 @@ fun TaskScreen(
                     scrollToTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
                 )
             } else {
-                // ... (Workspace Tab logic to be updated similarly)
-                Column {
-                    // Workspace Filter Chips
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item {
-                            FilterChip(
-                                selected = (currentWorkspaceId ?: -1) == -1,
-                                onClick = { viewModel.setWorkspace(-1) },
-                                label = { Text("All") },
-                                leadingIcon = { 
-                                    Icon(
-                                        Icons.Default.Home, 
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    ) 
-                                }
-                            )
-                        }
-                        items(workspaces) { workspace ->
-                            val isSelected = workspace.id == currentWorkspaceId
-                            val workspaceColor = androidx.compose.ui.graphics.Color(workspace.color)
-                            
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { viewModel.setWorkspace(workspace.id) },
-                                label = { Text(workspace.name) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = workspaceColor,
-                                    selectedLabelColor = androidx.compose.ui.graphics.Color.White,
-                                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                                    labelColor = workspaceColor
-                                ),
-                                border = FilterChipDefaults.filterChipBorder(
-                                    enabled = true,
-                                    selected = isSelected,
-                                    borderColor = workspaceColor,
-                                    selectedBorderColor = workspaceColor,
-                                    borderWidth = 1.dp
-                                )
-                            )
-                        }
-                    }
-                    
+                // Workspaces Tab (Grid Summary)
+                Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                     if (workspaces.isEmpty()) {
-                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                             Text("No workspaces yet. Add one!", style = MaterialTheme.typography.bodyLarge)
-                         }
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No workspaces yet. Add one!", style = MaterialTheme.typography.bodyLarge)
+                        }
                     } else {
-                        TimelineView(
-                            tasksWithChecklists = filteredTasks,
-                            workspaces = workspacesMap,
-                            onCheckedChange = { task, checked ->
-                                viewModel.update(task.copy(isCompleted = checked))
-                            },
-                            onChecklistItemChange = { item ->
-                                viewModel.toggleChecklistItem(item)
-                            },
-                            onDelete = { task ->
-                                viewModel.delete(task)
-                            },
-                            onEdit = { task ->
-                                val matchingItem = filteredTasks.find { it.task.id == task.id }
-                                onEditTask(task, matchingItem?.checklist ?: emptyList())
-                            },
-                            onAddTask = { date ->
-                                newTaskInitialDate = if (date.time == 0L) null else date.time
-                                showNewTaskSheet = true
-                            },
-                            scrollToTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
-                        )
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(workspaces) { workspace ->
+                                // Calculate metrics for this workspace
+                                val workspaceTasks = globalTasks.filter { it.task.workspaceId == workspace.id }
+                                val total = workspaceTasks.size
+                                val completed = workspaceTasks.count { it.task.isCompleted }
+                                
+                                WorkspaceProgressCard(
+                                    name = workspace.name,
+                                    color = workspace.color,
+                                    completedTasks = completed,
+                                    totalTasks = total,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
                     }
                 }
             }
