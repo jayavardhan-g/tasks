@@ -20,6 +20,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.material3.Surface
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
 import kotlinx.coroutines.launch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -159,7 +168,19 @@ fun TimelineView(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    val isTodayVisible by remember {
+        derivedStateOf {
+            val visibleItems = listState.layoutInfo.visibleItemsInfo
+            if (visibleItems.isEmpty()) true
+            else {
+                val todayKey = "header_${SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())}"
+                visibleItems.any { it.key == todayKey }
+            }
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f),
@@ -256,7 +277,6 @@ fun TimelineView(
             }
         }
     }
-        
         CalendarStrip(
             onDateSelected = { dateStr ->
                 val index = calculateIndexForDate(dateStr, dateList, groupedTasks)
@@ -266,6 +286,48 @@ fun TimelineView(
             }
         )
     }
+    
+    // "Go to Today" Floating Button
+    AnimatedVisibility(
+        visible = !isTodayVisible,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = 120.dp) // Anchored above CalendarStrip
+    ) {
+        Surface(
+            onClick = {
+                scope.launch {
+                    if (todayIndex >= 0) {
+                        listState.animateScrollToItem(todayIndex)
+                    }
+                }
+            },
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            shadowElevation = 6.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Schedule,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Today",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
 }
 
 private fun calculateIndexForDate(
