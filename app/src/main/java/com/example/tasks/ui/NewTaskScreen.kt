@@ -27,10 +27,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -288,7 +288,7 @@ fun NewTaskScreen(
 
             // Priority
             OptionRow(
-                icon = Icons.Outlined.Star,
+                icon = Icons.Outlined.Flag,
                 text = if (priority == 0) "Set priority" else "Priority: ${arrayOf("None", "Low", "Medium", "High")[priority]}",
                 onClick = { showPrioritySheet = true }
             )
@@ -329,7 +329,7 @@ fun NewTaskScreen(
             
             // Tags
             OptionRow(
-                icon = Icons.Default.Star, // Tag icon usually outlined label
+                icon = Icons.Default.Flag, // Tag icon usually outlined label
                 text = if (tags.isEmpty()) "Assign tags" else tags,
                 onClick = { showTagInput = true }
             )

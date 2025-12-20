@@ -18,7 +18,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Notifications
 
 import androidx.compose.material3.AssistChip
@@ -185,7 +185,7 @@ fun NewTaskBottomSheet(
 
             // Priority
             OptionRow(
-                icon = androidx.compose.material.icons.Icons.Default.Star, // Or outlined star
+                icon = Icons.Default.Flag, // Or outlined star
                 text = if (priority == 0) "Set priority" else "Priority: ${arrayOf("None", "Low", "Medium", "High")[priority]}",
                 onClick = { showPrioritySheet = true }
             )

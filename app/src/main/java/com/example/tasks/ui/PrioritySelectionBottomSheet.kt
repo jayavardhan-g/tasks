@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning // Placeholder icon for priority
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -40,10 +40,10 @@ fun PrioritySelectionBottomSheet(
     val sheetState = rememberModalBottomSheetState()
     
     val priorities = listOf(
-        PriorityItem(0, "None", Icons.Default.Star, MaterialTheme.colorScheme.onSurface),
-        PriorityItem(1, "Low", Icons.Default.Star, Color(0xFF4CAF50)), // Green
-        PriorityItem(2, "Medium", Icons.Default.Star, Color(0xFFFF9800)), // Orange
-        PriorityItem(3, "High", Icons.Default.Star, Color(0xFFF44336)) // Red
+        PriorityItem(0, "None", Icons.Default.Flag, MaterialTheme.colorScheme.onSurface),
+        PriorityItem(1, "Low", Icons.Default.Flag, Color(0xFF4CAF50)), // Green
+        PriorityItem(2, "Medium", Icons.Default.Flag, Color(0xFFFF9800)), // Orange
+        PriorityItem(3, "High", Icons.Default.Flag, Color(0xFFF44336)) // Red
     )
 
     ModalBottomSheet(
