@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.tasks.data.Task
 import com.example.tasks.ui.NewTaskScreen
+import com.example.tasks.ui.SettingsScreen
 import com.example.tasks.ui.TaskScreen
 import com.example.tasks.ui.TasksViewModel
 import com.example.tasks.ui.TasksViewModelFactory
@@ -38,6 +39,7 @@ class MainActivity : ComponentActivity() {
 
 sealed interface Screen {
     object Home : Screen
+    object Settings : Screen
     data class NewTask(val draft: com.example.tasks.data.TaskDraft? = null) : Screen
     data class EditTask(val task: Task, val checklist: List<com.example.tasks.data.ChecklistItem>) : Screen
 }
@@ -58,7 +60,14 @@ fun TasksApp(viewModel: TasksViewModel) {
                 onNavigateToNewTask = { draft -> navigateTo(Screen.NewTask(draft)) },
                 onEditTask = { task, checklist -> 
                     navigateTo(Screen.EditTask(task, checklist))
-                }
+                },
+                onNavigateToSettings = { navigateTo(Screen.Settings) }
+            )
+        }
+        is Screen.Settings -> {
+            SettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navigateTo(Screen.Home) }
             )
         }
         is Screen.NewTask -> {

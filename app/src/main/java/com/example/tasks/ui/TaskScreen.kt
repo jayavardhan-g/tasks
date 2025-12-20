@@ -96,7 +96,8 @@ import kotlinx.coroutines.launch
 fun TaskScreen(
     viewModel: TasksViewModel,
     onNavigateToNewTask: (TaskDraft?) -> Unit,
-    onEditTask: (Task, List<com.example.tasks.data.ChecklistItem>) -> Unit
+    onEditTask: (Task, List<com.example.tasks.data.ChecklistItem>) -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val globalTasks by viewModel.globalTasks.observeAsState(initial = emptyList())
     val filteredTasks by viewModel.filteredTasks.observeAsState(initial = emptyList())
@@ -200,15 +201,8 @@ fun TaskScreen(
                             IconButton(onClick = { isSearchActive = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "Search")
                             }
-                            IconButton(onClick = { viewModel.toggleTimelineMode() }) {
-                                Icon(
-                                    imageVector = Icons.Default.ColorLens,
-                                    contentDescription = "Toggle Timeline Mode",
-                                    tint = if (timelineMode == TimelineMode.COLOR) MaterialTheme.colorScheme.primary else Color.Black
-                                )
-                            }
-                            IconButton(onClick = { /* More */ }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            IconButton(onClick = onNavigateToSettings) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "Settings")
                             }
                         } else if (selectedTab == 1) {
                             IconButton(onClick = { showArchivedOnly = !showArchivedOnly }) {
