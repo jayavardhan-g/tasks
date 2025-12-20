@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 import androidx.compose.material3.AlertDialog
@@ -110,6 +111,8 @@ fun TaskScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val matches by viewModel.matches.observeAsState(initial = emptyList())
     val currentMatchIndex by viewModel.currentMatchIndex.collectAsState()
+    val timelineModeStr by viewModel.timelineMode.collectAsState()
+    val timelineMode = if (timelineModeStr == "COLOR") TimelineMode.COLOR else TimelineMode.DEFAULT
     
     var showArchivedOnly by remember { mutableStateOf(false) }
     var selectedWorkspaceForMenu by remember { mutableStateOf<Workspace?>(null) }
@@ -197,6 +200,13 @@ fun TaskScreen(
                             IconButton(onClick = { isSearchActive = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "Search")
                             }
+                            IconButton(onClick = { viewModel.toggleTimelineMode() }) {
+                                Icon(
+                                    imageVector = Icons.Default.ColorLens,
+                                    contentDescription = "Toggle Timeline Mode",
+                                    tint = if (timelineMode == TimelineMode.COLOR) MaterialTheme.colorScheme.primary else Color.Black
+                                )
+                            }
                             IconButton(onClick = { /* More */ }) {
                                 Icon(Icons.Default.MoreVert, contentDescription = "More")
                             }
@@ -242,10 +252,11 @@ fun TaskScreen(
             if (selectedTab == 0) {
                 // Timeline Tab (All Tasks)
                 TimelineView(
-                    tasksWithChecklists = globalTasks,
+                    tasks = globalTasks,
                     workspaces = workspacesMap,
-                    onCheckedChange = { task, checked ->
-                        viewModel.update(task.copy(isCompleted = checked))
+                    timelineMode = timelineMode,
+                    onCheckedChange = { task, completed ->
+                        viewModel.update(task.copy(isCompleted = completed))
                     },
                     onChecklistItemChange = { item ->
                         viewModel.toggleChecklistItem(item)
@@ -254,12 +265,11 @@ fun TaskScreen(
                         viewModel.delete(task)
                     },
                     onEdit = { task ->
-                        // find checklist from globalTasks? globalTasks is TaskWithChecklist
                         val matchingItem = globalTasks.find { it.task.id == task.id }
                         onEditTask(task, matchingItem?.checklist ?: emptyList())
                     },
-                    onAddTask = { date ->
-                        newTaskInitialDate = if (date.time == 0L) null else date.time
+                    onAddTaskAtDate = { date ->
+                        newTaskInitialDate = if (date == 0L) null else date
                         showNewTaskSheet = true
                     },
                     scrollToTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
