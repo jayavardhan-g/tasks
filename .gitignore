@@ -12,3 +12,4 @@
 .externalNativeBuild
 .cxx
 build_log*.txt
+*.log
