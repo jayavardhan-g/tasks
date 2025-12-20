@@ -8,5 +8,6 @@ data class Workspace(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val name: String,
-    val color: Long = 0xFFCCCCCC // Default Gray
+    val color: Long = 0xFFCCCCCC, // Default Gray
+    val isArchived: Boolean = false
 )

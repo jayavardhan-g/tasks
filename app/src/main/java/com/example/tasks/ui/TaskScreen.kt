@@ -1,8 +1,10 @@
 package com.example.tasks.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,10 +33,11 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -87,7 +90,7 @@ import com.example.tasks.data.TaskDraft
 import com.example.tasks.ui.components.WorkspaceProgressCard
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TaskScreen(
     viewModel: TasksViewModel,
@@ -107,6 +110,11 @@ fun TaskScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val matches by viewModel.matches.observeAsState(initial = emptyList())
     val currentMatchIndex by viewModel.currentMatchIndex.collectAsState()
+    
+    var showArchivedOnly by remember { mutableStateOf(false) }
+    var selectedWorkspaceForMenu by remember { mutableStateOf<Workspace?>(null) }
+    var showWorkspaceOptionsMenu by remember { mutableStateOf(false) }
+    var showEditWorkspaceDialog by remember { mutableStateOf(false) }
 
     val workspacesMap = remember(workspaces) {
         workspaces.associateBy { it.id }
@@ -135,7 +143,7 @@ fun TaskScreen(
                             isSearchActive = false 
                             viewModel.setSearchQuery("")
                         }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     },
                     actions = {
@@ -174,7 +182,7 @@ fun TaskScreen(
                             )
                         } else {
                             Text(
-                                "Workspace Progress",
+                                if (showArchivedOnly) "Archived Workspaces" else "Workspace Progress",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -185,16 +193,20 @@ fun TaskScreen(
                         titleContentColor = Color.Black
                     ),
                     actions = {
-                        IconButton(onClick = { isSearchActive = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
-                        }
                         if (selectedTab == 0) {
+                            IconButton(onClick = { isSearchActive = true }) {
+                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            }
                             IconButton(onClick = { /* More */ }) {
                                 Icon(Icons.Default.MoreVert, contentDescription = "More")
                             }
                         } else if (selectedTab == 1) {
-                            IconButton(onClick = { showAddWorkspaceDialog = true }) {
-                                Icon(Icons.Default.Add, contentDescription = "Add Workspace")
+                            IconButton(onClick = { showArchivedOnly = !showArchivedOnly }) {
+                                Icon(
+                                    if (showArchivedOnly) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Inventory,
+                                    contentDescription = if (showArchivedOnly) "Show Active" else "Show Archived",
+                                    tint = if (showArchivedOnly) MaterialTheme.colorScheme.primary else Color.Black
+                                )
                             }
                         }
                     }
@@ -220,7 +232,7 @@ fun TaskScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showNewTaskSheet = true },
-                modifier = Modifier.padding(bottom = 80.dp)
+                modifier = Modifier.padding(bottom = if (selectedTab == 0) 80.dp else 16.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Task")
             }
@@ -266,19 +278,28 @@ fun TaskScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(workspaces) { workspace ->
+                            val filteredWorkspaces = workspaces.filter { it.isArchived == showArchivedOnly }
+                            items(filteredWorkspaces) { workspace ->
                                 // Calculate metrics for this workspace
                                 val workspaceTasks = globalTasks.filter { it.task.workspaceId == workspace.id }
                                 val total = workspaceTasks.size
                                 val completed = workspaceTasks.count { it.task.isCompleted }
                                 
-                                WorkspaceProgressCard(
-                                    name = workspace.name,
-                                    color = workspace.color,
-                                    completedTasks = completed,
-                                    totalTasks = total,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                                Box {
+                                    WorkspaceProgressCard(
+                                        name = workspace.name,
+                                        color = workspace.color,
+                                        completedTasks = completed,
+                                        totalTasks = total,
+                                        modifier = Modifier.combinedClickable(
+                                            onClick = { viewModel.setWorkspace(workspace.id) },
+                                            onLongClick = {
+                                                selectedWorkspaceForMenu = workspace
+                                                showWorkspaceOptionsMenu = true
+                                            }
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
@@ -286,6 +307,84 @@ fun TaskScreen(
             }
         }
 
+        // Workspace Options Menu (AlertDialog)
+        if (showWorkspaceOptionsMenu && selectedWorkspaceForMenu != null) {
+            val workspace = selectedWorkspaceForMenu!!
+            AlertDialog(
+                onDismissRequest = { showWorkspaceOptionsMenu = false },
+                title = { Text(workspace.name) },
+                text = {
+                    Column {
+                        TextButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                viewModel.toggleArchiveWorkspace(workspace)
+                                showWorkspaceOptionsMenu = false
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Inventory, contentDescription = null)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(if (workspace.isArchived) "Unarchive" else "Archive")
+                            }
+                        }
+                        TextButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                showEditWorkspaceDialog = true
+                                showWorkspaceOptionsMenu = false
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("Edit")
+                            }
+                        }
+                        TextButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                viewModel.deleteWorkspace(workspace)
+                                showWorkspaceOptionsMenu = false
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("Delete", color = Color.Red)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showWorkspaceOptionsMenu = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Edit Workspace Dialog
+        if (showEditWorkspaceDialog && selectedWorkspaceForMenu != null) {
+            EditWorkspaceDialog(
+                workspace = selectedWorkspaceForMenu!!,
+                onDismiss = { showEditWorkspaceDialog = false },
+                onUpdate = { name ->
+                    viewModel.updateWorkspace(selectedWorkspaceForMenu!!.copy(name = name))
+                    showEditWorkspaceDialog = false
+                }
+            )
+        }
 
         
         if (showAddWorkspaceDialog) {
@@ -363,6 +462,38 @@ fun EmptyWorkspaceScreen(onAddWorkspace: (String) -> Unit) {
             Text("Create Workspace")
         }
     }
+}
+
+@Composable
+fun EditWorkspaceDialog(
+    workspace: Workspace,
+    onDismiss: () -> Unit,
+    onUpdate: (String) -> Unit
+) {
+    var name by remember { mutableStateOf(workspace.name) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Workspace") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(onClick = { if (name.isNotBlank()) onUpdate(name) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

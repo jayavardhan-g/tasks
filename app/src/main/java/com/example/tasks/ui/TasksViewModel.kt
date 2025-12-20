@@ -115,6 +115,14 @@ class TasksViewModel(
         repository.deleteWorkspace(workspace)
     }
 
+    fun toggleArchiveWorkspace(workspace: Workspace) = viewModelScope.launch {
+        repository.insertWorkspace(workspace.copy(isArchived = !workspace.isArchived))
+    }
+
+    fun updateWorkspace(workspace: Workspace) = viewModelScope.launch {
+        repository.insertWorkspace(workspace)
+    }
+
     // Checklist Logic
     fun getChecklist(taskId: Int): LiveData<List<com.example.tasks.data.ChecklistItem>> {
         return repository.getChecklistForTask(taskId).asLiveData()
