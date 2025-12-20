@@ -80,6 +80,7 @@ fun TimelineView(
     tasks: List<com.example.tasks.data.TaskWithChecklist>,
     workspaces: Map<Int, com.example.tasks.data.Workspace> = emptyMap(),
     timelineMode: TimelineMode = TimelineMode.DEFAULT,
+    showEmptyDates: Boolean = true,
     onCheckedChange: (Task, Boolean) -> Unit,
     onChecklistItemChange: (com.example.tasks.data.ChecklistItem) -> Unit,
     onDelete: (Task) -> Unit,
@@ -146,7 +147,15 @@ fun TimelineView(
             list.add(dateFormat.format(current.time))
             current.add(Calendar.DAY_OF_YEAR, 1)
         }
-        list
+        
+        if (!showEmptyDates) {
+            val todayStr = dateFormat.format(Date())
+            list.filter { dateStr ->
+                dateStr == todayStr || groupedTasks.containsKey(dateStr)
+            }
+        } else {
+            list
+        }
     }
 
     val listState = rememberLazyListState()

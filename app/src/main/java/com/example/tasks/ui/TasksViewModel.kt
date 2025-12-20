@@ -43,6 +43,9 @@ class TasksViewModel(
     private val _timelineMode = MutableStateFlow(preferenceManager.getTimelineMode())
     val timelineMode: StateFlow<String> = _timelineMode.asStateFlow()
 
+    private val _showEmptyDates = MutableStateFlow(preferenceManager.getShowEmptyDates())
+    val showEmptyDates: StateFlow<Boolean> = _showEmptyDates.asStateFlow()
+
     // For Workspace Tab (Full)
     val filteredTasks: LiveData<List<com.example.tasks.data.TaskWithChecklist>> = 
         _currentWorkspaceId.flatMapLatest { id ->
@@ -90,6 +93,12 @@ class TasksViewModel(
         val newMode = if (_timelineMode.value == "DEFAULT") "COLOR" else "DEFAULT"
         _timelineMode.value = newMode
         preferenceManager.setTimelineMode(newMode)
+    }
+
+    fun toggleShowEmptyDates() {
+        val newValue = !_showEmptyDates.value
+        _showEmptyDates.value = newValue
+        preferenceManager.setShowEmptyDates(newValue)
     }
 
     fun setWorkspace(workspaceId: Int) {

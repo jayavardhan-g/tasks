@@ -9,6 +9,7 @@ class PreferenceManager(context: Context) {
 
     companion object {
         private const val KEY_TIMELINE_MODE = "timeline_mode"
+        private const val KEY_SHOW_EMPTY_DATES = "show_empty_dates"
     }
 
     fun getTimelineMode(): String {
@@ -17,5 +18,13 @@ class PreferenceManager(context: Context) {
 
     fun setTimelineMode(mode: String) {
         sharedPreferences.edit().putString(KEY_TIMELINE_MODE, mode).apply()
+    }
+
+    fun getShowEmptyDates(): Boolean {
+        return sharedPreferences.getBoolean(KEY_SHOW_EMPTY_DATES, true)
+    }
+
+    fun setShowEmptyDates(show: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_SHOW_EMPTY_DATES, show).apply()
     }
 }

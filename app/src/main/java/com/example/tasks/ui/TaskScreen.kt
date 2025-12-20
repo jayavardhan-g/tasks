@@ -114,6 +114,7 @@ fun TaskScreen(
     val currentMatchIndex by viewModel.currentMatchIndex.collectAsState()
     val timelineModeStr by viewModel.timelineMode.collectAsState()
     val timelineMode = if (timelineModeStr == "COLOR") TimelineMode.COLOR else TimelineMode.DEFAULT
+    val showEmptyDates by viewModel.showEmptyDates.collectAsState()
     
     var showArchivedOnly by remember { mutableStateOf(false) }
     var selectedWorkspaceForMenu by remember { mutableStateOf<Workspace?>(null) }
@@ -249,6 +250,7 @@ fun TaskScreen(
                     tasks = globalTasks,
                     workspaces = workspacesMap,
                     timelineMode = timelineMode,
+                    showEmptyDates = showEmptyDates,
                     onCheckedChange = { task, completed ->
                         viewModel.update(task.copy(isCompleted = completed))
                     },
