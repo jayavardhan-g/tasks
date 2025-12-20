@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Flag
 import com.example.tasks.data.Task
 import com.example.tasks.ui.components.SummaryCards
 import com.example.tasks.ui.components.CalendarStrip
@@ -358,6 +359,7 @@ fun TimelineTaskItem(
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit
 ) {
+    val indicatorColor = if (workspaceColor != null) Color(workspaceColor) else Color(0xFF0056B3)
     Row(modifier = Modifier.height(IntrinsicSize.Min)) {
         // Timeline Line
         Column(
@@ -367,7 +369,7 @@ fun TimelineTaskItem(
             Box(
                 modifier = Modifier
                     .size(24.dp)
-                    .border(2.dp, Color(0xFF0056B3), CircleShape)
+                    .border(2.dp, indicatorColor, CircleShape)
                     .clickable { onCheckedChange(task, !task.isCompleted) },
                 contentAlignment = Alignment.Center
             ) {
@@ -375,7 +377,7 @@ fun TimelineTaskItem(
                     Box(
                         modifier = Modifier
                             .size(12.dp)
-                            .background(Color(0xFF0056B3), CircleShape)
+                            .background(indicatorColor, CircleShape)
                     )
                 }
             }
@@ -385,7 +387,7 @@ fun TimelineTaskItem(
                 modifier = Modifier
                     .width(2.dp)
                     .weight(1f)
-                    .background(Color(0xFF0056B3).copy(alpha = 0.5f))
+                    .background(indicatorColor.copy(alpha = 0.5f))
             )
         }
         
@@ -396,12 +398,30 @@ fun TimelineTaskItem(
                 .clickable { onEdit(task) }
                 .padding(bottom = 16.dp)
         ) {
-            Text(
-                text = task.title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (task.priority > 0) {
+                    val priorityColor = when (task.priority) {
+                        3 -> Color(0xFFF44336) // Red
+                        2 -> Color(0xFFFF9800) // Orange
+                        1 -> Color(0xFF4CAF50) // Green
+                        else -> Color.Transparent
+                    }
+                    if (priorityColor != Color.Transparent) {
+                        Icon(
+                            imageVector = Icons.Default.Flag,
+                            contentDescription = "Priority",
+                            modifier = Modifier.size(16.dp).padding(end = 4.dp),
+                            tint = priorityColor
+                        )
+                    }
+                }
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
+                )
+            }
             
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -493,7 +513,7 @@ fun TimelineAddTaskRow(
                 modifier = Modifier
                     .width(2.dp)
                     .height(8.dp)
-                    .background(Color(0xFF0056B3).copy(alpha = 0.5f))
+                    .background(Color.Gray.copy(alpha = 0.3f))
             )
             
             Box(
