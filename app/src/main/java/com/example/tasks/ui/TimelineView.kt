@@ -51,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -421,7 +422,7 @@ fun TimelineTaskItem(
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit
 ) {
-    val indicatorColor = if (workspaceColor != null) Color(workspaceColor) else Color(0xFF0056B3)
+    val indicatorColor = if (workspaceColor != null) Color(workspaceColor) else Color.Gray
     Row(modifier = Modifier.height(IntrinsicSize.Min)) {
         // Timeline Line
         Column(
@@ -445,12 +446,23 @@ fun TimelineTaskItem(
             }
             
             // Vertical Line
-            Box(
+            Canvas(
                 modifier = Modifier
                     .width(2.dp)
                     .weight(1f)
-                    .background(indicatorColor.copy(alpha = 0.5f))
-            )
+            ) {
+                val pathEffect = if (workspaceColor == null) {
+                    PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                } else null
+                
+                drawLine(
+                    color = indicatorColor.copy(alpha = 0.5f),
+                    start = Offset(size.width / 2, 0f),
+                    end = Offset(size.width / 2, size.height),
+                    strokeWidth = 2.dp.toPx(),
+                    pathEffect = pathEffect
+                )
+            }
         }
         
         // Task Item Content
@@ -571,12 +583,19 @@ fun TimelineAddTaskRow(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Line from above
-            Box(
+            Canvas(
                 modifier = Modifier
                     .width(2.dp)
                     .height(8.dp)
-                    .background(Color.Gray.copy(alpha = 0.3f))
-            )
+            ) {
+                drawLine(
+                    color = Color.Gray.copy(alpha = 0.3f),
+                    start = Offset(size.width / 2, 0f),
+                    end = Offset(size.width / 2, size.height),
+                    strokeWidth = 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f), 0f)
+                )
+            }
             
             Box(
                 modifier = Modifier
