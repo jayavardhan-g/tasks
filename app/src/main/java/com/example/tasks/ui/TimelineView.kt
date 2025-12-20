@@ -433,14 +433,16 @@ fun TimelineTaskItem(
                 modifier = Modifier
                     .size(24.dp)
                     .border(2.dp, indicatorColor, CircleShape)
+                    .background(if (task.isCompleted) indicatorColor else Color.Transparent, CircleShape)
                     .clickable { onCheckedChange(task, !task.isCompleted) },
                 contentAlignment = Alignment.Center
             ) {
                 if (task.isCompleted) {
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .background(indicatorColor, CircleShape)
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Completed",
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.White
                     )
                 }
             }
