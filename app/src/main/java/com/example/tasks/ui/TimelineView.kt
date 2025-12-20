@@ -447,6 +447,25 @@ fun TimelineTaskItem(
             modifier = Modifier.width(48.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Line from above
+            Canvas(
+                modifier = Modifier
+                    .width(2.dp)
+                    .height(8.dp)
+            ) {
+                val pathEffect = if (timelineMode == TimelineMode.COLOR && workspaceColor == null) {
+                    PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                } else null
+                
+                drawLine(
+                    color = indicatorColor.copy(alpha = 0.5f),
+                    start = Offset(size.width / 2, 0f),
+                    end = Offset(size.width / 2, size.height),
+                    strokeWidth = 2.dp.toPx(),
+                    pathEffect = pathEffect
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .size(24.dp)
@@ -465,7 +484,7 @@ fun TimelineTaskItem(
                 }
             }
             
-            // Vertical Line
+            // Vertical Line BELOW
             Canvas(
                 modifier = Modifier
                     .width(2.dp)
@@ -647,16 +666,16 @@ fun TimelineAddTaskRow(
             Canvas(
                 modifier = Modifier
                     .width(2.dp)
-                    .height(8.dp)
+                    .height(16.dp)
             ) {
                 val lineColor = if (timelineMode == TimelineMode.COLOR) {
-                    Color.Gray.copy(alpha = 0.3f)
+                    Color.Gray.copy(alpha = 0.5f)
                 } else {
                     Color(0xFF0056B3).copy(alpha = 0.5f)
                 }
                 
                 val pathEffect = if (timelineMode == TimelineMode.COLOR) {
-                    PathEffect.dashPathEffect(floatArrayOf(5f, 5f), 0f)
+                    PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
                 } else null
 
                 drawLine(
@@ -680,6 +699,31 @@ fun TimelineAddTaskRow(
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)
+                )
+            }
+
+            // Line BELOW
+            Canvas(
+                modifier = Modifier
+                    .width(2.dp)
+                    .weight(1f)
+            ) {
+                val lineColor = if (timelineMode == TimelineMode.COLOR) {
+                    Color.Gray.copy(alpha = 0.5f)
+                } else {
+                    Color(0xFF0056B3).copy(alpha = 0.5f)
+                }
+                
+                val pathEffect = if (timelineMode == TimelineMode.COLOR) {
+                    PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                } else null
+
+                drawLine(
+                    color = lineColor,
+                    start = Offset(size.width / 2, 0f),
+                    end = Offset(size.width / 2, size.height),
+                    strokeWidth = 2.dp.toPx(),
+                    pathEffect = pathEffect
                 )
             }
         }
