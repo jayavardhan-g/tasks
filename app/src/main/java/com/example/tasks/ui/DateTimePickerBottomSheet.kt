@@ -94,7 +94,11 @@ fun DateTimePickerBottomSheet(
                 icon = Icons.Outlined.DateRange,
                 text = "Today",
                 subtext = SimpleDateFormat("EEE", Locale.getDefault()).format(Date(today)),
-                onClick = { selectedDate = today }
+                onClick = { 
+                    selectedDate = today 
+                    onDateSelected(today)
+                    onDismiss()
+                }
             )
 
             // Tomorrow
@@ -104,7 +108,11 @@ fun DateTimePickerBottomSheet(
                 icon = Icons.Outlined.DateRange,
                 text = "Tomorrow",
                 subtext = SimpleDateFormat("EEE", Locale.getDefault()).format(Date(tomorrow)),
-                onClick = { selectedDate = tomorrow }
+                onClick = { 
+                    selectedDate = tomorrow 
+                    onDateSelected(tomorrow)
+                    onDismiss()
+                }
             )
 
             // Next Week (Next Monday)
@@ -120,7 +128,11 @@ fun DateTimePickerBottomSheet(
                 icon = Icons.Outlined.DateRange,
                 text = "Next week",
                 subtext = SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(Date(nextWeek)),
-                onClick = { selectedDate = nextWeek }
+                onClick = { 
+                    selectedDate = nextWeek 
+                    onDateSelected(nextWeek)
+                    onDismiss()
+                }
             )
 
             // Custom
@@ -134,7 +146,11 @@ fun DateTimePickerBottomSheet(
              DateTimePickerRow(
                 icon = Icons.Default.Close, 
                 text = "No date",
-                onClick = { selectedDate = null }
+                onClick = { 
+                    selectedDate = null 
+                    onDateSelected(null)
+                    onDismiss()
+                }
             )
             
             Divider(modifier = Modifier.padding(vertical = 12.dp))
@@ -148,25 +164,6 @@ fun DateTimePickerBottomSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                    Text("Cancel")
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Button(
-                    onClick = { 
-                        onDateSelected(selectedDate)
-                        onDismiss()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Select")
-                }
-            }
         }
     }
 
@@ -185,6 +182,8 @@ fun DateTimePickerBottomSheet(
                         selectedDate = newCal.timeInMillis
                     }
                     showCustomDatePicker = false
+                    onDateSelected(selectedDate)
+                    onDismiss()
                 }) { Text("OK") }
             },
             dismissButton = {
@@ -211,6 +210,8 @@ fun DateTimePickerBottomSheet(
                     cal.set(Calendar.MINUTE, timePickerState.minute)
                     selectedDate = cal.timeInMillis
                     showCustomTimePicker = false
+                    onDateSelected(selectedDate)
+                    onDismiss()
                 }) { Text("OK") }
             },
             dismissButton = {
