@@ -21,6 +21,7 @@ import com.example.tasks.data.TaskWithChecklist
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import com.example.tasks.util.PreferenceManager
 
 class TasksViewModel(
     application: Application,
@@ -37,6 +38,10 @@ class TasksViewModel(
 
     private val _currentMatchIndex = MutableStateFlow(0)
     val currentMatchIndex: StateFlow<Int> = _currentMatchIndex.asStateFlow()
+
+    private val preferenceManager = PreferenceManager(getApplication())
+    private val _timelineMode = MutableStateFlow(preferenceManager.getTimelineMode())
+    val timelineMode: StateFlow<String> = _timelineMode.asStateFlow()
 
     // For Workspace Tab (Full)
     val filteredTasks: LiveData<List<com.example.tasks.data.TaskWithChecklist>> = 
@@ -79,6 +84,12 @@ class TasksViewModel(
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
         _currentMatchIndex.value = 0
+    }
+
+    fun toggleTimelineMode() {
+        val newMode = if (_timelineMode.value == "DEFAULT") "COLOR" else "DEFAULT"
+        _timelineMode.value = newMode
+        preferenceManager.setTimelineMode(newMode)
     }
 
     fun setWorkspace(workspaceId: Int) {

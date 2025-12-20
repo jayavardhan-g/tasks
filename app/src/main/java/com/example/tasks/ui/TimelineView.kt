@@ -71,22 +71,26 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material.icons.filled.ColorLens
+
+enum class TimelineMode { DEFAULT, COLOR }
 
 @Composable
 fun TimelineView(
-    tasksWithChecklists: List<com.example.tasks.data.TaskWithChecklist>,
+    tasks: List<com.example.tasks.data.TaskWithChecklist>,
     workspaces: Map<Int, com.example.tasks.data.Workspace> = emptyMap(),
+    timelineMode: TimelineMode = TimelineMode.DEFAULT,
     onCheckedChange: (Task, Boolean) -> Unit,
     onChecklistItemChange: (com.example.tasks.data.ChecklistItem) -> Unit,
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit,
-    onAddTask: (Date) -> Unit,
+    onAddTaskAtDate: (Long) -> Unit,
     scrollToTaskId: Int? = null,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
-    val (tasksWithDeadlines, unplannedTasks) = remember(tasksWithChecklists) {
-        tasksWithChecklists.partition { it.task.deadline != 0L }
+    val (tasksWithDeadlines, unplannedTasks) = remember(tasks) {
+        tasks.partition { it.task.deadline != 0L }
     }
 
     val groupedTasks = remember(tasksWithDeadlines) {
@@ -205,7 +209,7 @@ fun TimelineView(
             
             if (isToday) {
                 val now = System.currentTimeMillis()
-                val overdueCount = tasksWithChecklists.count { !it.task.isCompleted && it.task.deadline != 0L && it.task.deadline < now }
+                val overdueCount = tasks.count { !it.task.isCompleted && it.task.deadline != 0L && it.task.deadline < now }
                 val unplannedCount = unplannedTasks.count { !it.task.isCompleted }
                 
                 item(key = "summary_$dateString") {
@@ -217,15 +221,14 @@ fun TimelineView(
                 }
             }
 
-            itemsIndexed(tasksForDate, key = { _, taskWithChecklist -> taskWithChecklist.task.id!! }) { index, taskWithChecklist ->
-                val task = taskWithChecklist.task
-                val workspace = if (task.workspaceId != null) workspaces[task.workspaceId] else null
+            itemsIndexed(tasksForDate, key = { _, taskWithChecklist -> taskWithChecklist.task.id!! }) { taskIndex, taskWithChecklist ->
                 TimelineTaskItem(
-                    task = task,
+                    task = taskWithChecklist.task,
                     checklist = taskWithChecklist.checklist,
-                    isLast = false,
-                    workspaceName = workspace?.name,
-                    workspaceColor = workspace?.color,
+                    isLast = taskIndex == (tasksForDate.size - 1),
+                    workspaceName = workspaces[taskWithChecklist.task.workspaceId]?.name,
+                    workspaceColor = workspaces[taskWithChecklist.task.workspaceId]?.color,
+                    timelineMode = timelineMode,
                     onCheckedChange = onCheckedChange,
                     onChecklistItemChange = onChecklistItemChange,
                     onDelete = onDelete,
@@ -235,9 +238,9 @@ fun TimelineView(
             
             item(key = "add_$dateString") {
                 TimelineAddTaskRow(
-                    date = date,
-                    isToday = isToday,
-                    onAddTask = onAddTask
+                    dateStr = dateString,
+                    timelineMode = timelineMode,
+                    onAddTaskAtDate = onAddTaskAtDate
                 )
             }
         }
@@ -263,6 +266,7 @@ fun TimelineView(
                     isLast = index == unplannedTasks.size - 1,
                     workspaceName = workspace?.name,
                     workspaceColor = workspace?.color,
+                    timelineMode = timelineMode,
                     onCheckedChange = onCheckedChange,
                     onChecklistItemChange = onChecklistItemChange,
                     onDelete = onDelete,
@@ -272,9 +276,9 @@ fun TimelineView(
             
             item(key = "add_unplanned") {
                 TimelineAddTaskRow(
-                    date = Date(0), // Using 0 to indicate no deadline
-                    isToday = false,
-                    onAddTask = onAddTask
+                    dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(0)), // Using 0 to indicate no deadline
+                    timelineMode = timelineMode,
+                    onAddTaskAtDate = onAddTaskAtDate
                 )
             }
         }
@@ -417,12 +421,17 @@ fun TimelineTaskItem(
     isLast: Boolean,
     workspaceName: String? = null,
     workspaceColor: Long? = null,
+    timelineMode: TimelineMode,
     onCheckedChange: (Task, Boolean) -> Unit,
     onChecklistItemChange: (com.example.tasks.data.ChecklistItem) -> Unit,
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit
 ) {
-    val indicatorColor = if (workspaceColor != null) Color(workspaceColor) else Color.Gray
+    val indicatorColor = if (timelineMode == TimelineMode.COLOR) {
+        if (workspaceColor != null) Color(workspaceColor) else Color.Gray
+    } else {
+        Color(0xFF0056B3) // Default localized Blue
+    }
     Row(modifier = Modifier.height(IntrinsicSize.Min)) {
         // Timeline Line
         Column(
@@ -451,7 +460,7 @@ fun TimelineTaskItem(
                     .width(2.dp)
                     .weight(1f)
             ) {
-                val pathEffect = if (workspaceColor == null) {
+                val pathEffect = if (timelineMode == TimelineMode.COLOR && workspaceColor == null) {
                     PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
                 } else null
                 
@@ -473,7 +482,7 @@ fun TimelineTaskItem(
                 .padding(bottom = 16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (task.priority > 0) {
+                if (timelineMode == TimelineMode.COLOR && task.priority > 0) {
                     val priorityColor = when (task.priority) {
                         3 -> Color(0xFFF44336) // Red
                         2 -> Color(0xFFFF9800) // Orange
@@ -514,6 +523,36 @@ fun TimelineTaskItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
                 )
+                
+                if (workspaceName != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    if (timelineMode == TimelineMode.DEFAULT) {
+                        val backgroundColor = if (workspaceColor != null) Color(workspaceColor) else Color(0xFF0056B3)
+                        Surface(
+                            color = backgroundColor,
+                            shape = CircleShape,
+                            modifier = Modifier.height(18.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = workspaceName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    } else {
+                        // Color Mode: Text only (lines are already colored)
+                        Text(
+                            text = workspaceName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
+                }
                 
                 Spacer(modifier = Modifier.width(8.dp))
                 
@@ -568,15 +607,26 @@ fun TimelineTaskItem(
 
 @Composable
 fun TimelineAddTaskRow(
-    date: Date,
-    isToday: Boolean,
-    onAddTask: (Date) -> Unit
+    dateStr: String,
+    timelineMode: TimelineMode,
+    onAddTaskAtDate: (Long) -> Unit
 ) {
+    val isToday = remember(dateStr) {
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        dateStr == todayStr
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .clickable { onAddTask(date) }
+            .height(48.dp)
+            .clickable {
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val date = sdf.parse(dateStr)
+                if (date != null) {
+                    onAddTaskAtDate(date.time)
+                }
+            },
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
             modifier = Modifier.width(48.dp),
@@ -588,12 +638,22 @@ fun TimelineAddTaskRow(
                     .width(2.dp)
                     .height(8.dp)
             ) {
+                val lineColor = if (timelineMode == TimelineMode.COLOR) {
+                    Color.Gray.copy(alpha = 0.3f)
+                } else {
+                    Color(0xFF0056B3).copy(alpha = 0.5f)
+                }
+                
+                val pathEffect = if (timelineMode == TimelineMode.COLOR) {
+                    PathEffect.dashPathEffect(floatArrayOf(5f, 5f), 0f)
+                } else null
+
                 drawLine(
-                    color = Color.Gray.copy(alpha = 0.3f),
+                    color = lineColor,
                     start = Offset(size.width / 2, 0f),
                     end = Offset(size.width / 2, size.height),
                     strokeWidth = 2.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f), 0f)
+                    pathEffect = pathEffect
                 )
             }
             
