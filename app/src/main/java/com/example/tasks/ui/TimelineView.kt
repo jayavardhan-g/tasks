@@ -512,7 +512,7 @@ fun TimelineTaskItem(
                 .padding(bottom = 16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (timelineMode == TimelineMode.COLOR && task.priority > 0) {
+                if (task.priority > 0) {
                     val priorityColor = when (task.priority) {
                         3 -> Color(0xFFF44336) // Red
                         2 -> Color(0xFFFF9800) // Orange

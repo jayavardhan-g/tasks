@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 import androidx.compose.material3.AlertDialog
@@ -560,11 +561,29 @@ fun TaskItem(
                 .weight(1f)
                 .padding(horizontal = 8.dp)
         ) {
-            Text(
-                text = task.title,
-                style = MaterialTheme.typography.bodyLarge,
-                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (task.priority > 0) {
+                    val priorityColor = when (task.priority) {
+                        3 -> Color(0xFFF44336) // Red
+                        2 -> Color(0xFFFF9800) // Orange
+                        1 -> Color(0xFF4CAF50) // Green
+                        else -> Color.Transparent
+                    }
+                    if (priorityColor != Color.Transparent) {
+                        Icon(
+                            imageVector = Icons.Default.Flag,
+                            contentDescription = "Priority",
+                            modifier = Modifier.size(16.dp).padding(end = 4.dp),
+                            tint = priorityColor
+                        )
+                    }
+                }
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
+                )
+            }
             val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
