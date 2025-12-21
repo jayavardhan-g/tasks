@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -39,7 +40,17 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.layout.offset
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -109,6 +120,8 @@ fun TaskScreen(
     var showNewTaskSheet by remember { mutableStateOf(false) }
     var newTaskInitialDate by remember { mutableStateOf<Long?>(null) }
     var showAddWorkspaceDialog by remember { mutableStateOf(false) }
+    var isFabExpanded by remember { mutableStateOf(false) }
+    var showHabitPlaceholder by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Timeline, 1 = Workspace
     var isSearchActive by remember { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -252,15 +265,88 @@ fun TaskScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showNewTaskSheet = true },
+            Box(
+                contentAlignment = Alignment.BottomEnd,
                 modifier = Modifier.padding(bottom = if (selectedTab == 0) 80.dp else 16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Task")
+                val rotation by animateFloatAsState(if (isFabExpanded) 45f else 0f)
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    // Sub-FABs
+                    val subFabModifier = Modifier.size(48.dp)
+                    
+                    AnimatedVisibility(
+                        visible = isFabExpanded,
+                        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+                        exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
+                    ) {
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            // Habit Option
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(end = 8.dp)) {
+                                    Text("Habit", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge)
+                                }
+                                FloatingActionButton(
+                                    onClick = { isFabExpanded = false; showHabitPlaceholder = true },
+                                    modifier = subFabModifier,
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Icon(Icons.Default.Repeat, contentDescription = "Add Habit", modifier = Modifier.size(20.dp))
+                                }
+                            }
+                            
+                            // Workspace Option
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(end = 8.dp)) {
+                                    Text("Workspace", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge)
+                                }
+                                FloatingActionButton(
+                                    onClick = { isFabExpanded = false; showAddWorkspaceDialog = true },
+                                    modifier = subFabModifier,
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Icon(Icons.Default.Work, contentDescription = "Add Workspace", modifier = Modifier.size(20.dp))
+                                }
+                            }
+                            
+                            // Task Option
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(end = 8.dp)) {
+                                    Text("Task", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge)
+                                }
+                                FloatingActionButton(
+                                    onClick = { isFabExpanded = false; showNewTaskSheet = true },
+                                    modifier = subFabModifier,
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "Add Task", modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    // Main FAB
+                    FloatingActionButton(
+                        onClick = { isFabExpanded = !isFabExpanded },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Expand Options",
+                            modifier = Modifier.rotate(rotation)
+                        )
+                    }
+                }
             }
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(innerPadding)) {
             if (selectedTab == 0) {
                 // Timeline Tab (All Tasks)
                 TimelineView(
@@ -375,7 +461,21 @@ fun TaskScreen(
                     }
                 }
             }
+            
+            // Dimmed Overlay
+            if (isFabExpanded) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) { isFabExpanded = false }
+                )
+            }
         }
+    }
 
         // Workspace Options Menu (AlertDialog)
         if (showWorkspaceOptionsMenu && selectedWorkspaceForMenu != null) {
@@ -501,6 +601,19 @@ fun TaskScreen(
                 },
                 initialDate = newTaskInitialDate,
                 initialWorkspaceId = selectedWorkspaceForDetail?.id
+            )
+        }
+
+        if (showHabitPlaceholder) {
+            AlertDialog(
+                onDismissRequest = { showHabitPlaceholder = false },
+                title = { Text("Add Habit") },
+                text = { Text("Habit tracking functionality is coming soon! Stay tuned.") },
+                confirmButton = {
+                    TextButton(onClick = { showHabitPlaceholder = false }) {
+                        Text("Awesome")
+                    }
+                }
             )
         }
     }
