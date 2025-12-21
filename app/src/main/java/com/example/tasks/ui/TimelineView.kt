@@ -154,7 +154,7 @@ fun TimelineView(
                 dateStr == todayStr || groupedTasks.containsKey(dateStr)
             }
         } else {
-            list
+            list.toList()
         }
     }
 

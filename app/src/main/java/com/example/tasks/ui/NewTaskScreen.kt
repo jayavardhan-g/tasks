@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Flag
@@ -97,7 +96,6 @@ fun NewTaskScreen(
     var pinAsNotification by remember { mutableStateOf(taskToEdit?.pinAsNotification ?: draftTask?.pinAsNotification ?: false) }
     
     var showDateTimePickerSheet by remember { mutableStateOf(false) } // Unified sheet
-    var showTip by remember { mutableStateOf(true) }
     
     var showPrioritySheet by remember { mutableStateOf(false) }
     var showTagInput by remember { mutableStateOf(false) }
@@ -162,35 +160,6 @@ fun NewTaskScreen(
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Tip Card
-            if (showTip) {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f)),
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(24.dp).padding(top=2.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            "You can change the date and time of a note or a task. Tap on the items below to change it.",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(
-                            onClick = { showTip = false },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(Icons.Default.Close, contentDescription = "Dismiss", modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             // Title Input

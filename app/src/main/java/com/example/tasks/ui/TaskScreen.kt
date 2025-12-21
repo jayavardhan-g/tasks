@@ -58,6 +58,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -119,6 +120,7 @@ fun TaskScreen(
     
     var showArchivedOnly by remember { mutableStateOf(false) }
     var selectedWorkspaceForMenu by remember { mutableStateOf<Workspace?>(null) }
+    var selectedWorkspaceForDetail by remember { mutableStateOf<Workspace?>(null) }
     var showWorkspaceOptionsMenu by remember { mutableStateOf(false) }
     var showEditWorkspaceDialog by remember { mutableStateOf(false) }
 
@@ -187,11 +189,25 @@ fun TaskScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         } else {
-                            Text(
-                                if (showArchivedOnly) "Archived Workspaces" else "Workspace Progress",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
+                            if (selectedWorkspaceForDetail != null) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = { selectedWorkspaceForDetail = null }) {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                    }
+                                    Text(
+                                        selectedWorkspaceForDetail!!.name,
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(selectedWorkspaceForDetail!!.color)
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    if (showArchivedOnly) "Archived Workspaces" else "Workspace Progress",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -206,7 +222,7 @@ fun TaskScreen(
                             IconButton(onClick = onNavigateToSettings) {
                                 Icon(Icons.Default.MoreVert, contentDescription = "Settings")
                             }
-                        } else if (selectedTab == 1) {
+                        } else if (selectedTab == 1 && selectedWorkspaceForDetail == null) {
                             IconButton(onClick = { showArchivedOnly = !showArchivedOnly }) {
                                 Icon(
                                     if (showArchivedOnly) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Inventory,
@@ -272,9 +288,54 @@ fun TaskScreen(
                     scrollToTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
                 )
             } else {
-                // Workspaces Tab (Grid Summary)
+                // Workspaces Tab
                 Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                    if (workspaces.isEmpty()) {
+                    if (selectedWorkspaceForDetail != null) {
+                        val workspaceTasks = globalTasks.filter { it.task.workspaceId == selectedWorkspaceForDetail!!.id }
+                            .sortedBy { it.task.deadline }
+                            
+                        if (workspaceTasks.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("No tasks in this workspace.", style = MaterialTheme.typography.bodyLarge)
+                            }
+                        } else {
+                            val groupedWorkspaceTasks = workspaceTasks.groupBy {
+                                if (it.task.deadline == 0L) "Unplanned"
+                                else SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(it.task.deadline))
+                            }
+
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                groupedWorkspaceTasks.forEach { (date, tasks) ->
+                                    item {
+                                        Text(
+                                            text = date,
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp, start = 4.dp)
+                                        )
+                                    }
+                                    items(tasks) { taskWithChecklist ->
+                                        TaskItem(
+                                            task = taskWithChecklist.task,
+                                            onCheckedChange = { task, completed ->
+                                                viewModel.update(task.copy(isCompleted = completed))
+                                            },
+                                            onDelete = { task ->
+                                                viewModel.delete(task)
+                                            },
+                                            onEdit = { task ->
+                                                onEditTask(task, taskWithChecklist.checklist)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else if (workspaces.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text("No workspaces yet. Add one!", style = MaterialTheme.typography.bodyLarge)
                         }
@@ -299,7 +360,9 @@ fun TaskScreen(
                                         completedTasks = completed,
                                         totalTasks = total,
                                         modifier = Modifier.combinedClickable(
-                                            onClick = { viewModel.setWorkspace(workspace.id) },
+                                            onClick = { 
+                                                selectedWorkspaceForDetail = workspace
+                                            },
                                             onLongClick = {
                                                 selectedWorkspaceForMenu = workspace
                                                 showWorkspaceOptionsMenu = true
@@ -436,7 +499,8 @@ fun TaskScreen(
                     newTaskInitialDate = null
                     onNavigateToNewTask(TaskDraft(title = title, deadline = date, workspaceId = workspaceId, priority = priority, pinAsNotification = pinAsNotification))
                 },
-                initialDate = newTaskInitialDate
+                initialDate = newTaskInitialDate,
+                initialWorkspaceId = selectedWorkspaceForDetail?.id
             )
         }
     }
@@ -545,70 +609,73 @@ fun TaskItem(
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit = {}
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onEdit(task) }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        onClick = { onEdit(task) },
+        color = Color.Transparent
     ) {
-        CircularCheckbox(
-            checked = task.isCompleted,
-            onCheckedChange = { onCheckedChange(task, it) }
-        )
-        Column(
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 8.dp)
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (task.priority > 0) {
-                    val priorityColor = when (task.priority) {
-                        3 -> Color(0xFFF44336) // Red
-                        2 -> Color(0xFFFF9800) // Orange
-                        1 -> Color(0xFF4CAF50) // Green
-                        else -> Color.Transparent
+            CircularCheckbox(
+                checked = task.isCompleted,
+                onCheckedChange = { onCheckedChange(task, it) }
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (task.priority > 0) {
+                        val priorityColor = when (task.priority) {
+                            3 -> Color(0xFFF44336) // Red
+                            2 -> Color(0xFFFF9800) // Orange
+                            1 -> Color(0xFF4CAF50) // Green
+                            else -> Color.Transparent
+                        }
+                        if (priorityColor != Color.Transparent) {
+                            Icon(
+                                imageVector = Icons.Default.Flag,
+                                contentDescription = "Priority",
+                                modifier = Modifier.size(16.dp).padding(end = 4.dp),
+                                tint = priorityColor
+                            )
+                        }
                     }
-                    if (priorityColor != Color.Transparent) {
-                        Icon(
-                            imageVector = Icons.Default.Flag,
-                            contentDescription = "Priority",
-                            modifier = Modifier.size(16.dp).padding(end = 4.dp),
-                            tint = priorityColor
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
+                        color = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                    Text(
+                        text = dateFormat.format(Date(task.deadline)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (workspaceName != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = workspaceName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (workspaceColor != null) Color.White else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .background(
+                                    color = if (workspaceColor != null) Color(workspaceColor) else MaterialTheme.colorScheme.primaryContainer,
+                                    shape = MaterialTheme.shapes.extraSmall
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
-                )
             }
-            val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = dateFormat.format(Date(task.deadline)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (workspaceName != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = workspaceName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (workspaceColor != null) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .background(
-                                color = if (workspaceColor != null) androidx.compose.ui.graphics.Color(workspaceColor) else MaterialTheme.colorScheme.primaryContainer,
-                                shape = MaterialTheme.shapes.small
-                            )
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                    )
-                }
-            }
-        }
-        IconButton(onClick = { onDelete(task) }) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete Task")
         }
     }
 }
