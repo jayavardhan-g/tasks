@@ -119,7 +119,7 @@ fun TaskScreen(
 
     var showNewTaskSheet by remember { mutableStateOf(false) }
     var newTaskInitialDate by remember { mutableStateOf<Long?>(null) }
-    var showAddWorkspaceDialog by remember { mutableStateOf(false) }
+    var showAddWorkspaceSheet by remember { mutableStateOf(false) }
     var isFabExpanded by remember { mutableStateOf(false) }
     var showHabitPlaceholder by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Timeline, 1 = Workspace
@@ -305,7 +305,7 @@ fun TaskScreen(
                                     Text("Workspace", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge)
                                 }
                                 FloatingActionButton(
-                                    onClick = { isFabExpanded = false; showAddWorkspaceDialog = true },
+                                    onClick = { isFabExpanded = false; showAddWorkspaceSheet = true },
                                     modifier = subFabModifier,
                                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                                 ) {
@@ -557,13 +557,12 @@ fun TaskScreen(
         }
 
         
-        if (showAddWorkspaceDialog) {
-            AddWorkspaceDialog(
-                onDismiss = { showAddWorkspaceDialog = false },
-                onAdd = { name ->
-                    val randomColor = (0xFF000000..0xFFFFFFFF).random() or 0xFF000000
-                    viewModel.insertWorkspace(com.example.tasks.data.Workspace(name = name, color = randomColor))
-                    showAddWorkspaceDialog = false
+        if (showAddWorkspaceSheet) {
+            AddWorkspaceBottomSheet(
+                onDismiss = { showAddWorkspaceSheet = false },
+                onAdd = { name, color ->
+                    viewModel.insertWorkspace(com.example.tasks.data.Workspace(name = name, color = color))
+                    showAddWorkspaceSheet = false
                 }
             )
         }
@@ -680,36 +679,7 @@ fun EditWorkspaceDialog(
     )
 }
 
-@Composable
-fun AddWorkspaceDialog(
-    onDismiss: () -> Unit,
-    onAdd: (String) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("New Workspace") },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Name") },
-                singleLine = true
-            )
-        },
-        confirmButton = {
-            Button(onClick = { if (name.isNotBlank()) onAdd(name) }) {
-                Text("Add")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
 
 
 
