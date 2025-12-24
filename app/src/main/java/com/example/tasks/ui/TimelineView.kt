@@ -30,6 +30,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.foundation.background
@@ -159,6 +161,16 @@ fun TimelineView(
     }
 
     val listState = rememberLazyListState()
+
+    var isScrolling by remember { mutableStateOf(false) }
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            isScrolling = true
+        } else {
+            delay(2000)
+            isScrolling = false
+        }
+    }
     
     val todayIndex = remember(dateList, groupedTasks) {
         calculateIndexForDate(
@@ -304,7 +316,7 @@ fun TimelineView(
     
     // "Go to Today" Floating Button
     AnimatedVisibility(
-        visible = !isTodayVisible,
+        visible = !isTodayVisible && isScrolling,
         enter = fadeIn(),
         exit = fadeOut(),
         modifier = Modifier
