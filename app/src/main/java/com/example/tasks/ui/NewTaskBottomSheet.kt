@@ -67,26 +67,29 @@ import java.util.Locale
 @Composable
 fun NewTaskBottomSheet(
     workspaces: List<Workspace>,
+    taskToEdit: com.example.tasks.data.Task? = null,
+    initialChecklist: List<com.example.tasks.data.ChecklistItem> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (String, String, Long, Int?, Int, String, List<ChecklistItem>, Boolean) -> Unit, // title, desc, deadline, workspaceId, priority, tags, checklist, pinAsNotification
     onAddWorkspace: (String) -> Unit,
     initialDate: Long? = null,
     initialWorkspaceId: Int? = null
 ) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var selectedDate by remember { mutableStateOf<Long?>(initialDate) }
+    var title by remember { mutableStateOf(taskToEdit?.title ?: "") }
+    var description by remember { mutableStateOf(taskToEdit?.description ?: "") }
+    var selectedDate by remember { mutableStateOf<Long?>(if (taskToEdit != null) taskToEdit.deadline else initialDate) }
     var selectedWorkspace by remember { mutableStateOf<Workspace?>(null) }
     
-    LaunchedEffect(initialWorkspaceId, workspaces) {
-        if (initialWorkspaceId != null && initialWorkspaceId != -1) {
-            selectedWorkspace = workspaces.find { it.id == initialWorkspaceId }
+    LaunchedEffect(initialWorkspaceId, taskToEdit, workspaces) {
+        val targetId = taskToEdit?.workspaceId ?: initialWorkspaceId
+        if (targetId != null && targetId != -1) {
+            selectedWorkspace = workspaces.find { it.id == targetId }
         }
     }
 
-    var priority by remember { mutableStateOf(0) }
-    var tags by remember { mutableStateOf("") }
-    var pinAsNotification by remember { mutableStateOf(false) }
+    var priority by remember { mutableStateOf(taskToEdit?.priority ?: 0) }
+    var tags by remember { mutableStateOf(taskToEdit?.tags ?: "") }
+    var pinAsNotification by remember { mutableStateOf(taskToEdit?.pinAsNotification ?: false) }
 
     var showDatePicker by remember { mutableStateOf(false) } 
     var showDateTimePickerSheet by remember { mutableStateOf(false) } 
@@ -96,7 +99,9 @@ fun NewTaskBottomSheet(
     var showChecklistSheet by remember { mutableStateOf(false) }
 
     val checklistItems = remember { 
-        androidx.compose.runtime.mutableStateListOf<ChecklistItem>()
+        androidx.compose.runtime.mutableStateListOf<ChecklistItem>().apply {
+            addAll(initialChecklist)
+        }
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)

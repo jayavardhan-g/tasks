@@ -119,6 +119,8 @@ fun TaskScreen(
 
     var showNewTaskSheet by remember { mutableStateOf(false) }
     var newTaskInitialDate by remember { mutableStateOf<Long?>(null) }
+    var editingTask by remember { mutableStateOf<Task?>(null) }
+    var editingChecklist by remember { mutableStateOf<List<com.example.tasks.data.ChecklistItem>>(emptyList()) }
     var showAddWorkspaceSheet by remember { mutableStateOf(false) }
     var isFabExpanded by remember { mutableStateOf(false) }
     var showHabitPlaceholder by remember { mutableStateOf(false) }
@@ -371,7 +373,9 @@ fun TaskScreen(
                     },
                     onEdit = { task ->
                         val matchingItem = globalTasks.find { it.task.id == task.id }
-                        onEditTask(task, matchingItem?.checklist ?: emptyList())
+                        editingTask = task
+                        editingChecklist = matchingItem?.checklist ?: emptyList()
+                        showNewTaskSheet = true
                     },
                     onAddTaskAtDate = { date ->
                         newTaskInitialDate = if (date == 0L) null else date
@@ -452,7 +456,9 @@ fun TaskScreen(
                                                 viewModel.delete(task)
                                             },
                                             onEdit = { task ->
-                                                onEditTask(task, taskWithChecklist.checklist)
+                                                editingTask = task
+                                                editingChecklist = taskWithChecklist.checklist
+                                                showNewTaskSheet = true
                                             }
                                         )
                                     }
@@ -608,12 +614,17 @@ fun TaskScreen(
         if (showNewTaskSheet) {
             NewTaskBottomSheet(
                 workspaces = workspaces,
+                taskToEdit = editingTask,
+                initialChecklist = editingChecklist,
                 onDismiss = { 
                     showNewTaskSheet = false
                     newTaskInitialDate = null
+                    editingTask = null
+                    editingChecklist = emptyList()
                 },
                 onSave = { title, desc, deadline, workspaceId, priority, tags, checklist, pinAsNotification ->
                     val task = Task(
+                        id = editingTask?.id ?: 0,
                         title = title,
                         description = desc,
                         deadline = deadline,
@@ -625,6 +636,8 @@ fun TaskScreen(
                     viewModel.insertTaskWithChecklist(task, checklist)
                     showNewTaskSheet = false
                     newTaskInitialDate = null
+                    editingTask = null
+                    editingChecklist = emptyList()
                 },
                 onAddWorkspace = { name ->
                     val randomColor = (0xFF000000..0xFFFFFFFF).random() or 0xFF000000
