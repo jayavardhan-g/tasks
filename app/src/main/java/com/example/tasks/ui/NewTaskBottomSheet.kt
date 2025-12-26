@@ -77,7 +77,15 @@ fun NewTaskBottomSheet(
 ) {
     var title by remember { mutableStateOf(taskToEdit?.title ?: "") }
     var description by remember { mutableStateOf(taskToEdit?.description ?: "") }
-    var selectedDate by remember { mutableStateOf<Long?>(if (taskToEdit != null) taskToEdit.deadline else initialDate) }
+    var selectedDate by remember { 
+        mutableStateOf<Long?>(
+            if (taskToEdit != null) {
+                if (taskToEdit.deadline == 0L) null else taskToEdit.deadline
+            } else {
+                initialDate
+            }
+        ) 
+    }
     var selectedWorkspace by remember { mutableStateOf<Workspace?>(null) }
     
     LaunchedEffect(initialWorkspaceId, taskToEdit, workspaces) {
