@@ -409,7 +409,9 @@ fun TaskScreen(
                                     viewModel.delete(task)
                                 },
                                 onEdit = { task ->
-                                    onEditTask(task, taskWithChecklist.checklist)
+                                    editingTask = task
+                                    editingChecklist = taskWithChecklist.checklist
+                                    showNewTaskSheet = true
                                 }
                             )
                         }
