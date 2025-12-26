@@ -66,13 +66,13 @@ def run_build_task(clean_install=False):
         # Note: 'uninstallAll' is the gradle task, but sometimes 'adb uninstall' is faster if we know package name.
         # simpler to just use gradle's uninstallDebug
         try:
-            subprocess.run([cmd, "uninstallDebug"], shell=(platform.system()=="Windows"), check=False)
+            subprocess.run([cmd, "uninstallDebug"], shell=(platform.system()=="Windows"), check=False, stdin=subprocess.DEVNULL)
         except:
             pass # Ignore errors if app wasn't installed
 
     print("\n🔨 Building and Updating App...")
     try:
-        subprocess.run([cmd, "installDebug"], shell=(platform.system()=="Windows"), check=True)
+        subprocess.run([cmd, "installDebug"], shell=(platform.system()=="Windows"), check=True, stdin=subprocess.DEVNULL)
         print("\n🎉 SUCCESS! App updated.")
     except subprocess.CalledProcessError:
         print("\n💥 BUILD FAILED.")
@@ -88,7 +88,11 @@ def main_menu():
         print(" [4] 🧹 Clean Install (Wipe Data) <-- Use if app crashes on launch")
         print(" [q] 🚪 Quit")
         
-        choice = input("\n👉 Command: ").lower().strip()
+        try:
+            choice = input("\n👉 Command: ").lower().strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n👋 Exiting...")
+            break
         
         if choice == '1':
             run_build_task(clean_install=False)
