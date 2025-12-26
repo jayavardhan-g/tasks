@@ -230,7 +230,7 @@ fun TimelineView(
             
             if (isToday) {
                 val now = System.currentTimeMillis()
-                val overdueCount = tasks.count { !it.task.isCompleted && it.task.deadline != 0L && it.task.deadline < now }
+                val overdueCount = tasks.count { !it.task.isCompleted && it.task.deadline > 0L && it.task.deadline < now }
                 val unplannedCount = unplannedTasks.count { !it.task.isCompleted }
                 
                 item(key = "summary_$dateString") {
@@ -557,22 +557,50 @@ fun TimelineTaskItem(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 4.dp)
             ) {
-                Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Schedule,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = Color.Gray
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-                Text(
-                    text = timeFormat.format(Date(task.deadline)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-                
-                if (workspaceName != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
+                if (task.deadline > 0L) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = if (!task.isCompleted && task.deadline < System.currentTimeMillis()) Color.Red else Color.Gray
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                    Text(
+                        text = timeFormat.format(Date(task.deadline)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (!task.isCompleted && task.deadline < System.currentTimeMillis()) Color.Red else Color.Gray
+                    )
+                    
+                    if (workspaceName != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        if (timelineMode == TimelineMode.DEFAULT) {
+                            val backgroundColor = if (workspaceColor != null) Color(workspaceColor) else Color(0xFF0056B3)
+                            Surface(
+                                color = backgroundColor,
+                                shape = CircleShape,
+                                modifier = Modifier.height(18.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = workspaceName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        maxLines = 1,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = workspaceName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                } else if (workspaceName != null) {
                     if (timelineMode == TimelineMode.DEFAULT) {
                         val backgroundColor = if (workspaceColor != null) Color(workspaceColor) else Color(0xFF0056B3)
                         Surface(
@@ -592,7 +620,6 @@ fun TimelineTaskItem(
                             }
                         }
                     } else {
-                        // Color Mode: Text only (lines are already colored)
                         Text(
                             text = workspaceName,
                             style = MaterialTheme.typography.bodySmall,
@@ -600,7 +627,7 @@ fun TimelineTaskItem(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.width(8.dp))
                 
                 // Repeats Icon (Placeholder)
