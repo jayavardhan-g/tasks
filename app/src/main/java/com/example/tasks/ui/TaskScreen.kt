@@ -235,7 +235,7 @@ fun TaskScreen(
                             IconButton(onClick = onNavigateToSettings) {
                                 Icon(Icons.Default.MoreVert, contentDescription = "Settings")
                             }
-                        } else if (selectedTab == 1 && selectedWorkspaceForDetail == null) {
+                        } else if (selectedTab == 2 && selectedWorkspaceForDetail == null) {
                             IconButton(onClick = { showArchivedOnly = !showArchivedOnly }) {
                                 Icon(
                                     if (showArchivedOnly) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Inventory,
@@ -257,10 +257,16 @@ fun TaskScreen(
                     onClick = { selectedTab = 0 }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.List, contentDescription = "Workspaces") },
-                    label = { Text("Workspaces") },
+                    icon = { Icon(Icons.Default.Inventory, contentDescription = "Unplanned") },
+                    label = { Text("Unplanned") },
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.List, contentDescription = "Workspaces") },
+                    label = { Text("Workspaces") },
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 }
                 )
             }
         },
@@ -373,6 +379,38 @@ fun TaskScreen(
                     },
                     scrollToTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
                 )
+            } else if (selectedTab == 1) {
+                // Unplanned Tasks Tab
+                val unplannedTasks = globalTasks.filter { it.task.deadline == 0L }
+                
+                if (unplannedTasks.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No unplanned tasks!", style = MaterialTheme.typography.bodyLarge)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                    ) {
+                        items(unplannedTasks) { taskWithChecklist ->
+                            TaskItem(
+                                task = taskWithChecklist.task,
+                                workspaceName = workspacesMap[taskWithChecklist.task.workspaceId]?.name,
+                                workspaceColor = workspacesMap[taskWithChecklist.task.workspaceId]?.color,
+                                onCheckedChange = { task, completed ->
+                                    viewModel.update(task.copy(isCompleted = completed))
+                                },
+                                onDelete = { task ->
+                                    viewModel.delete(task)
+                                },
+                                onEdit = { task ->
+                                    onEditTask(task, taskWithChecklist.checklist)
+                                }
+                            )
+                        }
+                    }
+                }
             } else {
                 // Workspaces Tab
                 Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -732,13 +770,17 @@ fun TaskItem(
                 }
                 val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
-                    Text(
-                        text = dateFormat.format(Date(task.deadline)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (task.deadline != 0L) {
+                        Text(
+                            text = dateFormat.format(Date(task.deadline)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     if (workspaceName != null) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                        if (task.deadline != 0L) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         Text(
                             text = workspaceName,
                             style = MaterialTheme.typography.labelSmall,
