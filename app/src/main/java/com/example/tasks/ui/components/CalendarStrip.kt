@@ -46,6 +46,7 @@ import java.util.TimeZone
 @Composable
 fun CalendarStrip(
     modifier: Modifier = Modifier,
+    getPriorityForDate: (Calendar) -> Int = { 0 },
     onDateSelected: (String) -> Unit = {}
 ) {
     val totalPages = 1000
@@ -137,12 +138,14 @@ fun CalendarStrip(
                 weekDates.forEachIndexed { index, date ->
                     val isSelected = isSameDay(date, selectedDate)
                     val isToday = isSameDay(date, Calendar.getInstance())
+                    val priority = getPriorityForDate(date)
                     
                     CalendarDay(
                         dayLetter = days[index],
                         date = date.get(Calendar.DAY_OF_MONTH),
                         isSelected = isSelected,
                         isToday = isToday,
+                        priority = priority,
                         onClick = { 
                             selectedDate = date
                             onDateSelected(dateFormat.format(date.time))
@@ -202,6 +205,7 @@ fun CalendarDay(
     date: Int,
     isSelected: Boolean,
     isToday: Boolean,
+    priority: Int = 0,
     onClick: () -> Unit
 ) {
     Column(
@@ -243,13 +247,20 @@ fun CalendarDay(
             )
         }
         
-        // Dot for selected or today? Let's just use a simple dot if it's today
-        if (isToday && !isSelected) {
+        val dotColor = when (priority) {
+            3 -> Color(0xFFF44336) // Red
+            2 -> Color(0xFFFF9800) // Orange
+            1 -> Color(0xFF4CAF50) // Green
+            0 -> if (isToday && !isSelected) Color(0xFF0056B3) else null
+            else -> null
+        }
+
+        if (dotColor != null) {
             Box(
                 modifier = Modifier
                     .size(4.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF0056B3))
+                    .background(dotColor)
             )
         } else {
             Spacer(modifier = Modifier.size(4.dp))

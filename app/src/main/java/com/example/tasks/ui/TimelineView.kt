@@ -305,6 +305,11 @@ fun TimelineView(
         }
     }
         CalendarStrip(
+            getPriorityForDate = { calendar ->
+                val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
+                val tasksForDate = groupedTasks[dateStr] ?: emptyList()
+                tasksForDate.maxOfOrNull { it.task.priority } ?: 0
+            },
             onDateSelected = { dateStr ->
                 val index = calculateIndexForDate(dateStr, dateList, groupedTasks)
                 scope.launch {
