@@ -221,7 +221,7 @@ fun CalendarDay(
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                .clip(CircleShape)
                 .background(
                     when {
                         isSelected -> Color(0xFF0056B3)
