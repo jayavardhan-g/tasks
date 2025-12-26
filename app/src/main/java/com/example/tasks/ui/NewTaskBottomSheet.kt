@@ -2,6 +2,7 @@ package com.example.tasks.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,35 +12,38 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Notifications
 
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,13 +53,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.ui.text.font.FontWeight
+import com.example.tasks.data.ChecklistItem
 import com.example.tasks.data.Workspace
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -64,14 +68,14 @@ import java.util.Locale
 fun NewTaskBottomSheet(
     workspaces: List<Workspace>,
     onDismiss: () -> Unit,
-    onSave: (String, String, Long, Int?, Int, String, Boolean) -> Unit, // title, desc, deadline, workspaceId, priority, tags, pinAsNotification
+    onSave: (String, String, Long, Int?, Int, String, List<ChecklistItem>, Boolean) -> Unit, // title, desc, deadline, workspaceId, priority, tags, checklist, pinAsNotification
     onAddWorkspace: (String) -> Unit,
-    onExpandToFull: (String, Long?, Int?, Int, Boolean) -> Unit,
     initialDate: Long? = null,
     initialWorkspaceId: Int? = null
 ) {
     var title by remember { mutableStateOf("") }
-    var selectedDate by remember { mutableStateOf<Long?>(initialDate ?: System.currentTimeMillis()) }
+    var description by remember { mutableStateOf("") }
+    var selectedDate by remember { mutableStateOf<Long?>(initialDate) }
     var selectedWorkspace by remember { mutableStateOf<Workspace?>(null) }
     
     LaunchedEffect(initialWorkspaceId, workspaces) {
@@ -81,25 +85,21 @@ fun NewTaskBottomSheet(
     }
 
     var priority by remember { mutableStateOf(0) }
-    
+    var tags by remember { mutableStateOf("") }
     var pinAsNotification by remember { mutableStateOf(false) }
 
     var showDatePicker by remember { mutableStateOf(false) } 
     var showDateTimePickerSheet by remember { mutableStateOf(false) } 
     var showWorkspaceSheet by remember { mutableStateOf(false) }
     var showPrioritySheet by remember { mutableStateOf(false) }
+    var showTagInput by remember { mutableStateOf(false) }
+    var showChecklistSheet by remember { mutableStateOf(false) }
 
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = false,
-        confirmValueChange = { newState ->
-            if (newState == androidx.compose.material3.SheetValue.Expanded) {
-                onExpandToFull(title, selectedDate, selectedWorkspace?.id, priority, pinAsNotification)
-                false // Don't snap to expanded visually, just navigate
-            } else {
-                true
-            }
-        }
-    )
+    val checklistItems = remember { 
+        androidx.compose.runtime.mutableStateListOf<ChecklistItem>()
+    }
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -111,6 +111,7 @@ fun NewTaskBottomSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .padding(bottom = 16.dp) 
+                .verticalScroll(rememberScrollState())
         ) {
             // Header: Title + Save
             Row(
@@ -120,15 +121,15 @@ fun NewTaskBottomSheet(
                 androidx.compose.foundation.text.BasicTextField(
                     value = title,
                     onValueChange = { title = it },
-                    textStyle = androidx.compose.ui.text.TextStyle(
+                    textStyle = TextStyle(
                         fontSize = 24.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                        fontWeight = FontWeight.Normal,
                         color = MaterialTheme.colorScheme.onBackground
                     ),
                     decorationBox = { innerTextField ->
-                        androidx.compose.foundation.layout.Box {
+                        Box {
                             if (title.isEmpty()) {
-                                Text("New Task", style = androidx.compose.ui.text.TextStyle(fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant))
+                                Text("New Task", style = TextStyle(fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant))
                             }
                             innerTextField()
                         }
@@ -141,7 +142,7 @@ fun NewTaskBottomSheet(
                 IconButton(
                     onClick = { 
                         if (title.isNotBlank()) {
-                            onSave(title, "", selectedDate ?: System.currentTimeMillis(), selectedWorkspace?.id, priority, "", pinAsNotification)
+                            onSave(title, description, selectedDate ?: 0L, selectedWorkspace?.id, priority, tags, checklistItems.toList(), pinAsNotification)
                         }
                     },
                     enabled = title.isNotBlank()
@@ -150,6 +151,27 @@ fun NewTaskBottomSheet(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Description Input
+            androidx.compose.foundation.text.BasicTextField(
+                value = description,
+                onValueChange = { description = it },
+                textStyle = TextStyle(
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                ),
+                decorationBox = { innerTextField ->
+                    Box {
+                        if (description.isEmpty()) {
+                            Text("Add details...", style = TextStyle(fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant))
+                        }
+                        innerTextField()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            
             Spacer(modifier = Modifier.height(24.dp))
             
             // Workspace Option
@@ -164,7 +186,7 @@ fun NewTaskBottomSheet(
                  modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                  verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(androidx.compose.material.icons.Icons.Outlined.DateRange, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.Outlined.DateRange, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.width(16.dp))
                 
                 val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
@@ -182,14 +204,48 @@ fun NewTaskBottomSheet(
                     onClick = { showDateTimePickerSheet = true },
                     label = { Text(timeLabel) }
                 )
+                
+                if (selectedDate != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = { selectedDate = null }, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear Date", modifier = Modifier.size(16.dp))
+                    }
+                }
             }
             
-            // Add reminder (Placeholder)
+            // Checklist Option
             OptionRow(
-                icon = Icons.Default.Notifications,
-                text = "Add reminder",
-                onClick = { /* TODO */ }
+                icon = Icons.Outlined.CheckCircle,
+                text = "Add checklist",
+                onClick = { showChecklistSheet = true }
             )
+            
+            // Display Checklist Items
+            if (checklistItems.isNotEmpty()) {
+                Column(modifier = Modifier.padding(start = 16.dp, top = 8.dp)) {
+                    checklistItems.forEachIndexed { index, item ->
+                         Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (item.isCompleted) Icons.Outlined.CheckCircle else Icons.Outlined.DateRange, // Placeholder for unchecked
+                                contentDescription = null, 
+                                modifier = Modifier.size(16.dp).clickable { 
+                                    checklistItems[index] = item.copy(isCompleted = !item.isCompleted)
+                                }, 
+                                tint = if (item.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(item.text, style = MaterialTheme.typography.bodyMedium)
+                            Spacer(modifier = Modifier.weight(1f))
+                            IconButton(onClick = { checklistItems.removeAt(index) }, modifier = Modifier.size(20.dp)) {
+                                Icon(Icons.Default.Clear, contentDescription = "Remove", modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    }
+                }
+            }
 
             // Priority
             OptionRow(
@@ -198,13 +254,26 @@ fun NewTaskBottomSheet(
                 onClick = { showPrioritySheet = true }
             )
 
-            // Pin as notification (Placeholder)
+            // Tags
+            OptionRow(
+                icon = Icons.Default.Flag, 
+                text = if (tags.isEmpty()) "Assign tags" else tags,
+                onClick = { showTagInput = true }
+            )
+            
+            // Reminder (Placeholder)
+            OptionRow(
+                icon = Icons.Default.Notifications,
+                text = "Add reminder",
+                onClick = { /* TODO */ }
+            )
+
+            // Pin as notification
              Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(vertical = 8.dp)
             ) {
-                 // Checkbox needs import or full path
-                androidx.compose.material3.Checkbox(
+                Checkbox(
                     checked = pinAsNotification, 
                     onCheckedChange = { pinAsNotification = it }
                 )
@@ -247,6 +316,33 @@ fun NewTaskBottomSheet(
                 onPrioritySelected = { newPriority ->
                     priority = newPriority
                     showPrioritySheet = false
+                }
+            )
+        }
+
+        if (showChecklistSheet) {
+            ChecklistBottomSheet(
+                onDismiss = { showChecklistSheet = false },
+                onAddChecklistItem = { text ->
+                    checklistItems.add(ChecklistItem(taskId = 0, text = text, isCompleted = false))
+                }
+            )
+        }
+        
+        if (showTagInput) {
+            AlertDialog(
+                onDismissRequest = { showTagInput = false },
+                title = { Text("Enter Tags") },
+                text = {
+                    OutlinedTextField(
+                        value = tags,
+                        onValueChange = { tags = it },
+                        label = { Text("Comma separated tags") },
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { showTagInput = false }) { Text("Done") }
                 }
             )
         }

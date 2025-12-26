@@ -574,7 +574,7 @@ fun TaskScreen(
                     showNewTaskSheet = false
                     newTaskInitialDate = null
                 },
-                onSave = { title, desc, deadline, workspaceId, priority, tags, pinAsNotification ->
+                onSave = { title, desc, deadline, workspaceId, priority, tags, checklist, pinAsNotification ->
                     val task = Task(
                         title = title,
                         description = desc,
@@ -584,19 +584,13 @@ fun TaskScreen(
                         tags = tags,
                         pinAsNotification = pinAsNotification
                     )
-                    // For now empty checklist for new simple tasks
-                    viewModel.insertTaskWithChecklist(task, emptyList())
+                    viewModel.insertTaskWithChecklist(task, checklist)
                     showNewTaskSheet = false
                     newTaskInitialDate = null
                 },
                 onAddWorkspace = { name ->
                     val randomColor = (0xFF000000..0xFFFFFFFF).random() or 0xFF000000
                     viewModel.insertWorkspace(com.example.tasks.data.Workspace(name = name, color = randomColor))
-                },
-                onExpandToFull = { title, date, workspaceId, priority, pinAsNotification ->
-                    showNewTaskSheet = false
-                    newTaskInitialDate = null
-                    onNavigateToNewTask(TaskDraft(title = title, deadline = date, workspaceId = workspaceId, priority = priority, pinAsNotification = pinAsNotification))
                 },
                 initialDate = newTaskInitialDate,
                 initialWorkspaceId = selectedWorkspaceForDetail?.id
