@@ -210,6 +210,12 @@ fun TaskScreen(
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
+                        } else if (selectedTab == 1) {
+                            Text(
+                                "Parking Lot",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
                         } else {
                             if (selectedWorkspaceForDetail != null) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -237,7 +243,7 @@ fun TaskScreen(
                         titleContentColor = Color.Black
                     ),
                     actions = {
-                        if (selectedTab == 0) {
+                        if (selectedTab == 0 || selectedTab == 1) {
                             IconButton(onClick = { isSearchActive = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "Search")
                             }
@@ -266,8 +272,8 @@ fun TaskScreen(
                     onClick = { selectedTab = 0 }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Inventory, contentDescription = "Unplanned") },
-                    label = { Text("Unplanned") },
+                    icon = { Icon(Icons.Default.Inventory, contentDescription = "Parking Lot") },
+                    label = { Text("Parking Lot") },
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 }
                 )
@@ -425,7 +431,7 @@ fun TaskScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                           "You don't have any unplanned tasks. Everything is on schedule!",
+                           "Your parking lot is empty. Everything is on schedule!",
                            style = MaterialTheme.typography.bodyMedium,
                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                            textAlign = TextAlign.Center
@@ -442,13 +448,7 @@ fun TaskScreen(
                         item {
                             Column(modifier = Modifier.padding(bottom = 8.dp)) {
                                 Text(
-                                    "Backlog",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    "${unplannedTasks.size} tasks waiting for action",
+                                    "${unplannedTasks.size} tasks parked for later",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

@@ -39,7 +39,7 @@ fun SummaryCards(
         )
         SummaryCard(
             count = unplannedCount,
-            label = "Unplanned",
+            label = "Parked",
             modifier = Modifier.weight(1f)
         )
     }
