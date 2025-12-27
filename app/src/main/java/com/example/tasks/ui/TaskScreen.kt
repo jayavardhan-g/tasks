@@ -98,6 +98,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.tasks.data.Task
@@ -136,13 +139,73 @@ fun TaskScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val matches by viewModel.matches.observeAsState(initial = emptyList())
     val currentMatchIndex by viewModel.currentMatchIndex.collectAsState()
-    val timelineModeStr by viewModel.timelineMode.collectAsState()
-    val timelineMode = if (timelineModeStr == "COLOR") TimelineMode.COLOR else TimelineMode.DEFAULT
-    val showEmptyDates by viewModel.showEmptyDates.collectAsState()
     
     var showArchivedOnly by remember { mutableStateOf(false) }
     var selectedWorkspaceForMenu by remember { mutableStateOf<Workspace?>(null) }
     var selectedWorkspaceForDetail by remember { mutableStateOf<Workspace?>(null) }
+    val timelineModeStr by viewModel.timelineMode.collectAsState()
+    val timelineMode = if (timelineModeStr == "COLOR") TimelineMode.COLOR else TimelineMode.DEFAULT
+    
+    val parkingLotListState = rememberLazyListState()
+    val scrollTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
+    
+    LaunchedEffect(scrollTaskId) {
+        if (selectedTab == 1 && scrollTaskId != null) {
+            val unplannedTasks = globalTasks.filter { it.task.deadline == 0L }
+            val groupedByWorkspace = unplannedTasks.groupBy { it.task.workspaceId }
+            var index = 0
+            index += 1 // Parking Lot header
+            var found = false
+            for (entry in groupedByWorkspace) {
+                index += 1 // Workspace header
+                val tasks = entry.value
+                val taskIdx = tasks.indexOfFirst { it.task.id == scrollTaskId }
+                if (taskIdx != -1) {
+                    index += taskIdx
+                    found = true
+                    break
+                }
+                index += tasks.size
+            }
+            if (found) {
+                parkingLotListState.animateScrollToItem(index)
+            }
+        }
+    }
+    
+    val workspaceDetailListState = rememberLazyListState()
+    
+    LaunchedEffect(scrollTaskId) {
+        if (selectedTab == 2 && selectedWorkspaceForDetail != null && scrollTaskId != null) {
+            val workspaceTasks = globalTasks.filter { it.task.workspaceId == selectedWorkspaceForDetail!!.id }
+                .sortedBy { it.task.deadline }
+            
+            val groupedWorkspaceTasks = workspaceTasks.groupBy {
+                if (it.task.deadline == 0L) "Unplanned"
+                else SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(it.task.deadline))
+            }
+            
+            var index = 0
+            var found = false
+            for (entry in groupedWorkspaceTasks) {
+                index += 1 // Date header
+                val tasks = entry.value
+                val taskIdx = tasks.indexOfFirst { it.task.id == scrollTaskId }
+                if (taskIdx != -1) {
+                    index += taskIdx
+                    found = true
+                    break
+                }
+                index += tasks.size
+            }
+            
+            if (found) {
+                workspaceDetailListState.animateScrollToItem(index)
+            }
+        }
+    }
+    val showEmptyDates by viewModel.showEmptyDates.collectAsState()
+    
     var showWorkspaceOptionsMenu by remember { mutableStateOf(false) }
     var showEditWorkspaceDialog by remember { mutableStateOf(false) }
 
@@ -441,6 +504,7 @@ fun TaskScreen(
                     val groupedByWorkspace = unplannedTasks.groupBy { it.task.workspaceId }
                     
                     LazyColumn(
+                        state = parkingLotListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -479,12 +543,14 @@ fun TaskScreen(
                                 }
                             }
                             
-                            items(tasks, key = { it.task.id!! }) { taskWithChecklist ->
+                             items(tasks, key = { it.task.id!! }) { taskWithChecklist ->
+                                val isHighlighted = taskWithChecklist.task.id == scrollTaskId
                                 Surface(
                                     shape = RoundedCornerShape(16.dp),
-                                    color = MaterialTheme.colorScheme.surface,
+                                    color = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface,
                                     tonalElevation = 1.dp,
                                     shadowElevation = 0.5.dp,
+                                    border = if (isHighlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
                                     modifier = Modifier.fillMaxWidth(),
                                     onClick = {
                                         editingTask = taskWithChecklist.task
@@ -568,6 +634,7 @@ fun TaskScreen(
                             }
 
                             LazyColumn(
+                                state = workspaceDetailListState,
                                 modifier = Modifier.fillMaxSize(),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
@@ -584,6 +651,7 @@ fun TaskScreen(
                                     items(tasks) { taskWithChecklist ->
                                         TaskItem(
                                             task = taskWithChecklist.task,
+                                            isHighlighted = taskWithChecklist.task.id == scrollTaskId,
                                             onCheckedChange = { task, completed ->
                                                 viewModel.update(task.copy(isCompleted = completed))
                                             },
@@ -868,13 +936,16 @@ fun TaskItem(
     task: Task,
     workspaceName: String? = null,
     workspaceColor: Long? = null,
+    isHighlighted: Boolean = false,
     onCheckedChange: (Task, Boolean) -> Unit,
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit = {}
 ) {
     Surface(
         onClick = { onEdit(task) },
-        color = Color.Transparent
+        color = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
+        border = if (isHighlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier

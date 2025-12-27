@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.CircleShape
@@ -250,6 +251,7 @@ fun TimelineView(
                     workspaceName = workspaces[taskWithChecklist.task.workspaceId]?.name,
                     workspaceColor = workspaces[taskWithChecklist.task.workspaceId]?.color,
                     timelineMode = timelineMode,
+                    isHighlighted = taskWithChecklist.task.id == scrollToTaskId,
                     onCheckedChange = onCheckedChange,
                     onChecklistItemChange = onChecklistItemChange,
                     onDelete = onDelete,
@@ -288,6 +290,7 @@ fun TimelineView(
                     workspaceName = workspace?.name,
                     workspaceColor = workspace?.color,
                     timelineMode = timelineMode,
+                    isHighlighted = task.id == scrollToTaskId,
                     onCheckedChange = onCheckedChange,
                     onChecklistItemChange = onChecklistItemChange,
                     onDelete = onDelete,
@@ -448,6 +451,7 @@ fun TimelineTaskItem(
     workspaceName: String? = null,
     workspaceColor: Long? = null,
     timelineMode: TimelineMode,
+    isHighlighted: Boolean = false,
     onCheckedChange: (Task, Boolean) -> Unit,
     onChecklistItemChange: (com.example.tasks.data.ChecklistItem) -> Unit,
     onDelete: (Task) -> Unit,
@@ -522,58 +526,92 @@ fun TimelineTaskItem(
         }
         
         // Task Item Content
-        Column(
+        Surface(
+            color = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+            border = if (isHighlighted) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
             modifier = Modifier
                 .weight(1f)
-                .clickable { onEdit(task) }
-                .padding(bottom = 16.dp)
+                .padding(end = 16.dp, bottom = 12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (task.priority > 0) {
-                    val priorityColor = when (task.priority) {
-                        3 -> Color(0xFFF44336) // Red
-                        2 -> Color(0xFFFF9800) // Orange
-                        1 -> Color(0xFF4CAF50) // Green
-                        else -> Color.Transparent
-                    }
-                    if (priorityColor != Color.Transparent) {
-                        Icon(
-                            imageVector = Icons.Default.Flag,
-                            contentDescription = "Priority",
-                            modifier = Modifier.size(16.dp).padding(end = 4.dp),
-                            tint = priorityColor
-                        )
-                    }
-                }
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
-                )
-            }
-            
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 4.dp)
+            Column(
+                modifier = Modifier
+                    .clickable { onEdit(task) }
+                    .padding(8.dp)
             ) {
-                if (task.deadline > 0L) {
-                    Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Schedule,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = if (!task.isCompleted && task.deadline < System.currentTimeMillis()) Color.Red else Color.Gray
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (task.priority > 0) {
+                        val priorityColor = when (task.priority) {
+                            3 -> Color(0xFFF44336) // Red
+                            2 -> Color(0xFFFF9800) // Orange
+                            1 -> Color(0xFF4CAF50) // Green
+                            else -> Color.Transparent
+                        }
+                        if (priorityColor != Color.Transparent) {
+                            Icon(
+                                imageVector = Icons.Default.Flag,
+                                contentDescription = "Priority",
+                                modifier = Modifier.size(16.dp).padding(end = 4.dp),
+                                tint = priorityColor
+                            )
+                        }
+                    }
                     Text(
-                        text = timeFormat.format(Date(task.deadline)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (!task.isCompleted && task.deadline < System.currentTimeMillis()) Color.Red else Color.Gray
+                        text = task.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
                     )
-                    
-                    if (workspaceName != null) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                }
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    if (task.deadline > 0L) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.Schedule,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = if (!task.isCompleted && task.deadline < System.currentTimeMillis()) Color.Red else Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                        Text(
+                            text = timeFormat.format(Date(task.deadline)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (!task.isCompleted && task.deadline < System.currentTimeMillis()) Color.Red else Color.Gray
+                        )
+                        
+                        if (workspaceName != null) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            if (timelineMode == TimelineMode.DEFAULT) {
+                                val backgroundColor = if (workspaceColor != null) Color(workspaceColor) else Color(0xFF0056B3)
+                                Surface(
+                                    color = backgroundColor,
+                                    shape = CircleShape,
+                                    modifier = Modifier.height(18.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = workspaceName,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(horizontal = 8.dp),
+                                            maxLines = 1,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = workspaceName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    } else if (workspaceName != null) {
                         if (timelineMode == TimelineMode.DEFAULT) {
                             val backgroundColor = if (workspaceColor != null) Color(workspaceColor) else Color(0xFF0056B3)
                             Surface(
@@ -600,78 +638,52 @@ fun TimelineTaskItem(
                             )
                         }
                     }
-                } else if (workspaceName != null) {
-                    if (timelineMode == TimelineMode.DEFAULT) {
-                        val backgroundColor = if (workspaceColor != null) Color(workspaceColor) else Color(0xFF0056B3)
-                        Surface(
-                            color = backgroundColor,
-                            shape = CircleShape,
-                            modifier = Modifier.height(18.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = workspaceName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    maxLines = 1,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = workspaceName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
-                        )
-                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    // Repeats Icon (Placeholder)
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Repeat,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Color.Gray
+                    )
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    // Notification Icon
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.NotificationsNone,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Color.Gray
+                    )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                // Repeats Icon (Placeholder)
-                Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Repeat,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = Color.Gray
-                )
-                
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                // Notification Icon
-                Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.NotificationsNone,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = Color.Gray
-                )
-            }
-            
-            // Inline Checklist
-            if (checklist.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                checklist.forEach { item ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 4.dp)
-                            .clickable { onChecklistItemChange(item) }
-                    ) {
-                        CircularCheckbox(
-                            checked = item.isCompleted,
-                            onCheckedChange = { onChecklistItemChange(item) },
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = item.text,
-                            style = MaterialTheme.typography.bodySmall,
-                            textDecoration = if (item.isCompleted) TextDecoration.LineThrough else null,
-                            color = if (item.isCompleted) Color.Gray else Color.Black
-                        )
+                // Inline Checklist
+                if (checklist.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    checklist.forEach { item ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 4.dp)
+                                .clickable { onChecklistItemChange(item) }
+                        ) {
+                            CircularCheckbox(
+                                checked = item.isCompleted,
+                                onCheckedChange = { onChecklistItemChange(item) },
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = item.text,
+                                style = MaterialTheme.typography.bodySmall,
+                                textDecoration = if (item.isCompleted) TextDecoration.LineThrough else null,
+                                color = if (item.isCompleted) Color.Gray else Color.Black
+                            )
+                        }
                     }
                 }
             }
