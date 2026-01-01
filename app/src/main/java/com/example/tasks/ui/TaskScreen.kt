@@ -146,7 +146,7 @@ fun TaskScreen(
     val timelineModeStr by viewModel.timelineMode.collectAsState()
     val timelineMode = if (timelineModeStr == "COLOR") TimelineMode.COLOR else TimelineMode.DEFAULT
     
-    val parkingLotListState = rememberLazyListState()
+    val unplannedListState = rememberLazyListState()
     val scrollTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
     
     LaunchedEffect(scrollTaskId) {
@@ -154,7 +154,7 @@ fun TaskScreen(
             val unplannedTasks = globalTasks.filter { it.task.deadline == 0L }
             val groupedByWorkspace = unplannedTasks.groupBy { it.task.workspaceId }
             var index = 0
-            index += 1 // Parking Lot header
+            index += 1 // Unplanned header
             var found = false
             for (entry in groupedByWorkspace) {
                 index += 1 // Workspace header
@@ -168,7 +168,7 @@ fun TaskScreen(
                 index += tasks.size
             }
             if (found) {
-                parkingLotListState.animateScrollToItem(index)
+                unplannedListState.animateScrollToItem(index)
             }
         }
     }
@@ -275,7 +275,7 @@ fun TaskScreen(
                             )
                         } else if (selectedTab == 1) {
                             Text(
-                                "Parking Lot",
+                                "Unplanned tasks",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -335,8 +335,8 @@ fun TaskScreen(
                     onClick = { selectedTab = 0 }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Inventory, contentDescription = "Parking Lot") },
-                    label = { Text("Parking Lot") },
+                    icon = { Icon(Icons.Default.Inventory, contentDescription = "Unplanned tasks") },
+                    label = { Text("Unplanned tasks") },
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 }
                 )
@@ -494,7 +494,7 @@ fun TaskScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                           "Your parking lot is empty. Everything is on schedule!",
+                           "You don't have any unplanned tasks. Everything is on schedule!",
                            style = MaterialTheme.typography.bodyMedium,
                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                            textAlign = TextAlign.Center
@@ -504,7 +504,7 @@ fun TaskScreen(
                     val groupedByWorkspace = unplannedTasks.groupBy { it.task.workspaceId }
                     
                     LazyColumn(
-                        state = parkingLotListState,
+                        state = unplannedListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -512,7 +512,7 @@ fun TaskScreen(
                         item {
                             Column(modifier = Modifier.padding(bottom = 8.dp)) {
                                 Text(
-                                    "${unplannedTasks.size} tasks parked for later",
+                                    "${unplannedTasks.size} Unplanned tasks",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
