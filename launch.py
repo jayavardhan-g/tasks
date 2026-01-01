@@ -29,7 +29,7 @@ def launch_emulator_sequence():
     sdk = get_sdk_path()
     emulator_bin = os.path.join(sdk, "emulator", "emulator")
     
-    # List AVDs
+    # --- 1. Select AVD ---
     try:
         result = subprocess.run([emulator_bin, "-list-avds"], capture_output=True, text=True)
         avds = [d for d in result.stdout.strip().splitlines() if d]
@@ -46,13 +46,32 @@ def launch_emulator_sequence():
         print(f"[{i+1}] {avd}")
     
     try:
-        choice = int(input("\nSelect device: ")) - 1
+        choice = int(input("\nSelect device (default 1): ")) - 1
         target_avd = avds[choice]
     except:
         target_avd = avds[0]
 
-    print(f"🚀 Launching {target_avd}...")
-    subprocess.Popen([emulator_bin, "-avd", target_avd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # --- 2. Select Boot Mode (NEW) ---
+    print(f"\n⚙️  Boot Options for {target_avd}:")
+    print(" [1] 🚀 Quick Boot (Standard)  <-- Fastest")
+    print(" [2] ❄️  Cold Boot (No Snapshot) <-- Use if app is glitching")
+    print(" [3] 🧨 Wipe Data (Factory Reset)<-- Use if app crashes on launch")
+    
+    boot_mode = input("\n👉 Select mode (default 1): ").strip()
+    
+    cmd = [emulator_bin, "-avd", target_avd]
+
+    if boot_mode == '2':
+        print(f"\n❄️  Cold booting {target_avd}...")
+        cmd.append("-no-snapshot-load")
+    elif boot_mode == '3':
+        print(f"\n🧨 Wiping data for {target_avd}...")
+        cmd.append("-wipe-data")
+    else:
+        print(f"\n🚀 Launching {target_avd}...")
+
+    # --- 3. Launch ---
+    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
     print("⏳ Waiting for boot...")
     subprocess.run(["adb", "wait-for-device"])
@@ -63,29 +82,27 @@ def run_build_task(clean_install=False):
     
     if clean_install:
         print("\n🧹 Uninstalling old app first...")
-        # Note: 'uninstallAll' is the gradle task, but sometimes 'adb uninstall' is faster if we know package name.
-        # simpler to just use gradle's uninstallDebug
         try:
             subprocess.run([cmd, "uninstallDebug"], shell=(platform.system()=="Windows"), check=False, stdin=subprocess.DEVNULL)
         except:
-            pass # Ignore errors if app wasn't installed
+            pass 
 
     print("\n🔨 Building and Updating App...")
     try:
-        subprocess.run([cmd, "installDebug"], shell=(platform.system()=="Windows"), check=True, stdin=subprocess.DEVNULL)
+        subprocess.run([cmd, "installUniversalGmsDebug"], shell=(platform.system()=="Windows"), check=True, stdin=subprocess.DEVNULL)
         print("\n🎉 SUCCESS! App updated.")
     except subprocess.CalledProcessError:
         print("\n💥 BUILD FAILED.")
 
 def main_menu():
     while True:
-        print("\n" + "="*30)
+        print("\n" + "="*35)
         print("   🤖 ANDROID COMMAND CENTER")
-        print("="*30)
-        print(" [1] ⚡ Update App (Keep Data)   <-- Use this 99% of the time")
+        print("="*35)
+        print(" [1] ⚡ Update App (Keep Data)")
         print(" [2] 📲 Launch Emulator")
         print(" [3] ❌ Stop ADB Server")
-        print(" [4] 🧹 Clean Install (Wipe Data) <-- Use if app crashes on launch")
+        print(" [4] 🧹 Clean Install (Wipe App Data)")
         print(" [q] 🚪 Quit")
         
         try:
@@ -111,4 +128,5 @@ if __name__ == "__main__":
         ans = input("⚠️ No emulator detected. Launch one? (y/n): ")
         if ans.lower() == 'y':
             launch_emulator_sequence()
+    
     main_menu()
