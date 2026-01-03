@@ -173,9 +173,10 @@ fun TimelineView(
         }
     }
     
+    val todayStr = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
     val todayIndex = remember(dateList, groupedTasks) {
         calculateIndexForDate(
-            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+            todayStr,
             dateList,
             groupedTasks
         )
@@ -238,7 +239,17 @@ fun TimelineView(
                     SummaryCards(
                         todoCount = tasksForDate.count { !it.task.isCompleted },
                         overdueCount = overdueCount,
-                        unplannedCount = unplannedCount
+                        unplannedCount = unplannedCount,
+                        onUnplannedClick = {
+                            if (unplannedTasks.isNotEmpty()) {
+                                scope.launch {
+                                    val unplannedHeaderIndex = calculateUnplannedHeaderIndex(dateList, todayStr, groupedTasks)
+                                    if (unplannedHeaderIndex != -1) {
+                                        listState.animateScrollToItem(unplannedHeaderIndex)
+                                    }
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -412,6 +423,24 @@ private fun calculateIndexForTaskId(
         index += 1 // Add Task Row
     }
     return -1
+}
+
+private fun calculateUnplannedHeaderIndex(
+    dateList: List<String>,
+    todayStr: String,
+    groupedTasks: Map<String, List<com.example.tasks.data.TaskWithChecklist>>
+): Int {
+    var index = 0
+    for (dateStr in dateList) {
+        val tasksForDate = groupedTasks[dateStr] ?: emptyList()
+        index += 1 // Header
+        if (dateStr == todayStr) {
+            index += 1 // SummaryCards
+        }
+        index += tasksForDate.size // Tasks
+        index += 1 // Add Task Row
+    }
+    return index // This should be the index of "unplanned_header"
 }
 
 

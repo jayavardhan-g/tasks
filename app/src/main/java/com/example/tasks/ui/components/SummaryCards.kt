@@ -1,6 +1,7 @@
 package com.example.tasks.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,9 @@ fun SummaryCards(
     todoCount: Int,
     overdueCount: Int,
     unplannedCount: Int,
+    onTodoClick: () -> Unit = {},
+    onOverdueClick: () -> Unit = {},
+    onUnplannedClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -30,16 +34,19 @@ fun SummaryCards(
         SummaryCard(
             count = todoCount,
             label = "To Do",
+            onClick = onTodoClick,
             modifier = Modifier.weight(1f)
         )
         SummaryCard(
             count = overdueCount,
             label = "Overdue",
+            onClick = onOverdueClick,
             modifier = Modifier.weight(1f)
         )
         SummaryCard(
             count = unplannedCount,
             label = "Unplanned",
+            onClick = onUnplannedClick,
             modifier = Modifier.weight(1f)
         )
     }
@@ -49,12 +56,14 @@ fun SummaryCards(
 fun SummaryCard(
     count: Int,
     label: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(Color(0xFFF0F4F8)) // Light bluish gray
+            .clickable { onClick() }
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center

@@ -150,33 +150,13 @@ fun TaskScreen(
     val scrollTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
     
     LaunchedEffect(scrollTaskId) {
-        if (selectedTab == 1 && scrollTaskId != null) {
-            val unplannedTasks = globalTasks.filter { it.task.deadline == 0L }
-            val groupedByWorkspace = unplannedTasks.groupBy { it.task.workspaceId }
-            var index = 0
-            index += 1 // Unplanned header
-            var found = false
-            for (entry in groupedByWorkspace) {
-                index += 1 // Workspace header
-                val tasks = entry.value
-                val taskIdx = tasks.indexOfFirst { it.task.id == scrollTaskId }
-                if (taskIdx != -1) {
-                    index += taskIdx
-                    found = true
-                    break
-                }
-                index += tasks.size
-            }
-            if (found) {
-                unplannedListState.animateScrollToItem(index)
-            }
-        }
+            // Removed unplanned tab scrolling logic as it's now handled within TimelineView
     }
     
     val workspaceDetailListState = rememberLazyListState()
     
     LaunchedEffect(scrollTaskId) {
-        if (selectedTab == 2 && selectedWorkspaceForDetail != null && scrollTaskId != null) {
+        if (selectedTab == 1 && selectedWorkspaceForDetail != null && scrollTaskId != null) {
             val workspaceTasks = globalTasks.filter { it.task.workspaceId == selectedWorkspaceForDetail!!.id }
                 .sortedBy { it.task.deadline }
             
@@ -273,12 +253,6 @@ fun TaskScreen(
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                        } else if (selectedTab == 1) {
-                            Text(
-                                "Unplanned tasks",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
                         } else {
                             if (selectedWorkspaceForDetail != null) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -306,14 +280,14 @@ fun TaskScreen(
                         titleContentColor = Color.Black
                     ),
                     actions = {
-                        if (selectedTab == 0 || selectedTab == 1) {
+                        if (selectedTab == 0) {
                             IconButton(onClick = { isSearchActive = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "Search")
                             }
                             IconButton(onClick = onNavigateToSettings) {
                                 Icon(Icons.Default.MoreVert, contentDescription = "Settings")
                             }
-                        } else if (selectedTab == 2 && selectedWorkspaceForDetail == null) {
+                        } else if (selectedTab == 1 && selectedWorkspaceForDetail == null) {
                             IconButton(onClick = { showArchivedOnly = !showArchivedOnly }) {
                                 Icon(
                                     if (showArchivedOnly) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Inventory,
@@ -335,16 +309,10 @@ fun TaskScreen(
                     onClick = { selectedTab = 0 }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Inventory, contentDescription = "Unplanned tasks") },
-                    label = { Text("Unplanned tasks") },
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 }
-                )
-                NavigationBarItem(
                     icon = { Icon(Icons.Default.List, contentDescription = "Workspaces") },
                     label = { Text("Workspaces") },
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 }
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 }
                 )
             }
         },
@@ -459,163 +427,6 @@ fun TaskScreen(
                     },
                     scrollToTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
                 )
-            } else if (selectedTab == 1) {
-                // Unplanned Tasks (Backlog) Tab
-                val unplannedTasks = globalTasks.filter { it.task.deadline == 0L }
-                
-                if (unplannedTasks.isEmpty()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
-                            modifier = Modifier.size(120.dp)
-                        ) {
-                             Box(contentAlignment = Alignment.Center) {
-                                 Icon(
-                                     Icons.Default.Inventory,
-                                     contentDescription = null,
-                                     modifier = Modifier.size(48.dp),
-                                     tint = MaterialTheme.colorScheme.primary
-                                 )
-                             }
-                        }
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Text(
-                           "All Clear!",
-                           style = MaterialTheme.typography.headlineSmall,
-                           fontWeight = FontWeight.Bold,
-                           color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                           "You don't have any unplanned tasks. Everything is on schedule!",
-                           style = MaterialTheme.typography.bodyMedium,
-                           color = MaterialTheme.colorScheme.onSurfaceVariant,
-                           textAlign = TextAlign.Center
-                        )
-                    }
-                } else {
-                    val groupedByWorkspace = unplannedTasks.groupBy { it.task.workspaceId }
-                    
-                    LazyColumn(
-                        state = unplannedListState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        item {
-                            Column(modifier = Modifier.padding(bottom = 8.dp)) {
-                                Text(
-                                    "${unplannedTasks.size} Unplanned tasks",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        
-                        groupedByWorkspace.forEach { (workspaceId, tasks) ->
-                            val workspace = workspacesMap[workspaceId]
-                            item(key = "ws_header_$workspaceId") {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(top = 8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(4.dp, 16.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(workspace?.color ?: 0xFF808080))
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = workspace?.name?.uppercase() ?: "NO WORKSPACE",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        letterSpacing = 1.2.sp
-                                    )
-                                }
-                            }
-                            
-                             items(tasks, key = { it.task.id!! }) { taskWithChecklist ->
-                                val isHighlighted = taskWithChecklist.task.id == scrollTaskId
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface,
-                                    tonalElevation = 1.dp,
-                                    shadowElevation = 0.5.dp,
-                                    border = if (isHighlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onClick = {
-                                        editingTask = taskWithChecklist.task
-                                        editingChecklist = taskWithChecklist.checklist
-                                        showNewTaskSheet = true
-                                    }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        CircularCheckbox(
-                                            checked = taskWithChecklist.task.isCompleted,
-                                            onCheckedChange = { completed ->
-                                                viewModel.update(taskWithChecklist.task.copy(isCompleted = completed))
-                                            }
-                                        )
-                                        Spacer(modifier = Modifier.width(16.dp))
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = taskWithChecklist.task.title,
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.SemiBold,
-                                                textDecoration = if (taskWithChecklist.task.isCompleted) TextDecoration.LineThrough else null,
-                                                color = if (taskWithChecklist.task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
-                                            )
-                                            if (taskWithChecklist.task.description.isNotEmpty()) {
-                                                Text(
-                                                    text = taskWithChecklist.task.description,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                            if (taskWithChecklist.checklist.isNotEmpty()) {
-                                                val completed = taskWithChecklist.checklist.count { it.isCompleted }
-                                                Text(
-                                                    text = "Checklist: $completed/${taskWithChecklist.checklist.size}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.padding(top = 4.dp)
-                                                )
-                                            }
-                                        }
-                                        if (taskWithChecklist.task.priority > 0) {
-                                             val priorityColor = when (taskWithChecklist.task.priority) {
-                                                3 -> Color(0xFFF44336)
-                                                2 -> Color(0xFFFF9800)
-                                                1 -> Color(0xFF4CAF50)
-                                                else -> Color.Transparent
-                                            }
-                                            Icon(
-                                                Icons.Default.Flag,
-                                                contentDescription = null,
-                                                tint = priorityColor,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             } else {
                 // Workspaces Tab
                 Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
