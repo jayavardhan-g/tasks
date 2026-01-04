@@ -284,13 +284,33 @@ class TasksViewModel(
         }
     }
 
-    fun insertHabit(name: String, iconName: String, colorHex: Long, targetValue: Int, unit: String?) = viewModelScope.launch {
+    fun insertHabit(
+        name: String, 
+        iconName: String, 
+        colorHex: Long, 
+        targetValue: Int, 
+        unit: String?,
+        frequencyType: String,
+        frequencyGoal: Int,
+        frequencyDays: String,
+        repeatInterval: Int,
+        reminderTime: String?,
+        priority: String,
+        description: String?
+    ) = viewModelScope.launch {
         repository.insertHabit(Habit(
             name = name, 
             iconName = iconName, 
             colorHex = colorHex,
             targetValue = targetValue,
-            unit = unit
+            unit = unit,
+            frequencyType = frequencyType,
+            frequencyGoal = frequencyGoal,
+            frequencyDays = frequencyDays,
+            repeatInterval = repeatInterval,
+            reminderTime = reminderTime,
+            priority = priority,
+            description = description
         ))
     }
 

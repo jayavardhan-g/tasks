@@ -1,5 +1,6 @@
 package com.example.tasks.ui.components
 
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -30,7 +33,7 @@ import androidx.compose.ui.graphics.toArgb
 @Composable
 fun AddHabitSheet(
     onDismiss: () -> Unit,
-    onSave: (String, String, Long, Int, String?) -> Unit
+    onSave: (String, String, Long, Int, String?, String, Int, String, Int, String?, String, String?) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
@@ -40,6 +43,18 @@ fun AddHabitSheet(
     var selectedColor by remember { mutableStateOf(Color(0xFF2196F3)) }
     var targetValue by remember { mutableStateOf(1) }
     var unit by remember { mutableStateOf("") }
+    
+    // New State
+    var frequencyType by remember { mutableStateOf("DAILY") }
+    var frequencyGoal by remember { mutableStateOf(1) }
+    var frequencyDays by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var repeatInterval by remember { mutableStateOf(1) }
+    
+    var isReminderOn by remember { mutableStateOf(false) }
+    var reminderTime by remember { mutableStateOf("09:00") } // HH:mm
+    
+    var priority by remember { mutableStateOf("MEDIUM") }
+    var description by remember { mutableStateOf("") }
 
     // Data
     val icons = listOf(
@@ -47,6 +62,7 @@ fun AddHabitSheet(
         "MenuBook" to Icons.Default.MenuBook,
         "FitnessCenter" to Icons.Default.FitnessCenter,
         "DirectionsRun" to Icons.Default.DirectionsRun,
+        // ... (truncated for brevity, keep existing)
         "SelfImprovement" to Icons.Default.SelfImprovement,
         "Brush" to Icons.Default.Brush,
         "Code" to Icons.Default.Code,
@@ -79,7 +95,8 @@ fun AddHabitSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp), // Add bottom padding for safety
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()), // Enable scrolling
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Text(
@@ -98,8 +115,22 @@ fun AddHabitSheet(
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
-                    imeAction = ImeAction.Done
+                    imeAction = ImeAction.Next
                 ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+            
+            // Description/Motivation
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Motivation (Optional)") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
@@ -141,7 +172,7 @@ fun AddHabitSheet(
                     }
                 }
 
-                // Unit Input (only visible if target > 1)
+                // Unit Input
                 if (targetValue > 1) {
                     OutlinedTextField(
                         value = unit,
@@ -155,6 +186,103 @@ fun AddHabitSheet(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline
                         )
                     )
+                }
+            }
+            
+            // Frequency Section
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Frequency", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                
+                // Frequency Type Selector
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    val types = listOf("DAILY" to "Daily", "WEEKLY_GOAL" to "Weekly", "SPECIFIC_DAYS" to "Fixed", "REPEAT_INTERVAL" to "Interval")
+                    types.forEach { (type, label) ->
+                        FilterChip(
+                            selected = frequencyType == type,
+                            onClick = { frequencyType = type },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                
+                // Dynamic Frequency Content
+                when (frequencyType) {
+                    "WEEKLY_GOAL" -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                           Text("Goal: $frequencyGoal times / week", modifier = Modifier.weight(1f))
+                           IconButton(onClick = { if(frequencyGoal > 1) frequencyGoal-- }) { Icon(Icons.Default.Remove, null) }
+                           Text("$frequencyGoal", style = MaterialTheme.typography.titleMedium)
+                           IconButton(onClick = { if(frequencyGoal < 7) frequencyGoal++ }) { Icon(Icons.Default.Add, null) }
+                        }
+                    }
+                    "SPECIFIC_DAYS" -> {
+                        // Days Toggle
+                        // 1=Mon, 7=Sun
+                        val days = listOf("M", "T", "W", "T", "F", "S", "S")
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            days.forEachIndexed { index, dayLabel ->
+                                val dayNum = index + 1
+                                val isSelected = frequencyDays.contains(dayNum)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { 
+                                        frequencyDays = if (isSelected) frequencyDays - dayNum else frequencyDays + dayNum
+                                    },
+                                    label = { Text(dayLabel) },
+                                    modifier = Modifier.size(32.dp),
+                                    shape = CircleShape,
+                                    // contentPadding = PaddingValues(0.dp) // Might need custom layout for small circles
+                                )
+                            }
+                        }
+                    }
+                    "REPEAT_INTERVAL" -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Every $repeatInterval days", modifier = Modifier.weight(1f))
+                            IconButton(onClick = { if(repeatInterval > 1) repeatInterval-- }) { Icon(Icons.Default.Remove, null) }
+                            Text("$repeatInterval", style = MaterialTheme.typography.titleMedium)
+                            IconButton(onClick = { repeatInterval++ }) { Icon(Icons.Default.Add, null) }
+                        }
+                    }
+                }
+            }
+            
+            // Reminders Section
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                   modifier = Modifier.fillMaxWidth(),
+                   horizontalArrangement = Arrangement.SpaceBetween,
+                   verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Set Reminder", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Switch(checked = isReminderOn, onCheckedChange = { isReminderOn = it })
+                }
+                
+                if (isReminderOn) {
+                    // Simple Time Input for MVP (Replace with TimePicker later if needed)
+                    OutlinedTextField(
+                        value = reminderTime,
+                        onValueChange = { reminderTime = it }, // No validation for now
+                        label = { Text("Time (HH:mm)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = { Icon(Icons.Default.Notifications, null) }
+                    )
+                }
+            }
+            
+            // Priority
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Priority", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val priorities = listOf("LOW", "MEDIUM", "HIGH")
+                    priorities.forEach { p ->
+                        InputChip(
+                            selected = priority == p,
+                            onClick = { priority = p },
+                            label = { Text(p) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
@@ -199,7 +327,20 @@ fun AddHabitSheet(
             Button(
                 onClick = { 
                     if (name.isNotBlank()) {
-                        onSave(name, selectedIconName, selectedColor.toArgb().toLong(), targetValue, if (targetValue > 1) unit else null)
+                        onSave(
+                            name, 
+                            selectedIconName, 
+                            selectedColor.toArgb().toLong(), 
+                            targetValue, 
+                            if (targetValue > 1) unit else null,
+                            frequencyType,
+                            frequencyGoal,
+                            frequencyDays.joinToString(","),
+                            repeatInterval,
+                            if (isReminderOn) reminderTime else null,
+                            priority,
+                            description.takeIf { it.isNotBlank() }
+                        )
                         onDismiss()
                     }
                 },

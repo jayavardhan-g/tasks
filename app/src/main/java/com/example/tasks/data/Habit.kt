@@ -20,7 +20,14 @@ data class Habit(
     val targetValue: Int = 1,
     val currentProgress: Int = 0,
     val progressDate: String? = null, // yyyy-MM-dd
-    val unit: String? = null
+    val unit: String? = null,
+    val frequencyType: String = "DAILY", // DAILY, WEEKLY_GOAL, SPECIFIC_DAYS, REPEAT_INTERVAL
+    val frequencyGoal: Int = 1, // X times per week
+    val frequencyDays: String = "", // "1,3,5" (Mon,Wed,Fri)
+    val repeatInterval: Int = 1, // Every X days
+    val reminderTime: String? = null, // "HH:mm"
+    val priority: String = "MEDIUM", // LOW, MEDIUM, HIGH
+    val description: String? = null
 ) {
     @Ignore
     val color: Color = Color(colorHex.toInt())

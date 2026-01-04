@@ -229,8 +229,22 @@ fun TimelineView(
             }
             
             if (isToday) {
-                item(key = "habit_strip_$dateString") {
-                    HabitStrip(habits = habits, onHabitToggle = onHabitToggle, onHabitLongClick = onHabitLongClick)
+                // Filter habits based on frequency
+                val filteredHabits = habits.filter { habit ->
+                    when (habit.frequencyType) {
+                        "SPECIFIC_DAYS" -> {
+                            if (habit.frequencyDays.isBlank()) return@filter false
+                            val todayDayOfWeek = (today.get(Calendar.DAY_OF_WEEK) + 5) % 7 + 1 // Convert to Mon=1...Sun=7
+                            habit.frequencyDays.split(",").mapNotNull { it.toIntOrNull() }.contains(todayDayOfWeek)
+                        }
+                        else -> true
+                    }
+                }
+                
+                if (filteredHabits.isNotEmpty()) {
+                    item(key = "habit_strip_$dateString") {
+                        HabitStrip(habits = filteredHabits, onHabitToggle = onHabitToggle, onHabitLongClick = onHabitLongClick)
+                    }
                 }
                 
                 val now = System.currentTimeMillis()

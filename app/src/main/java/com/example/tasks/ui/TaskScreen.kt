@@ -692,8 +692,11 @@ fun TaskScreen(
         if (showAddHabitSheet) {
             AddHabitSheet(
                 onDismiss = { showAddHabitSheet = false },
-                onSave = { name, iconName, colorHex, targetValue, unit ->
-                    viewModel.insertHabit(name, iconName, colorHex, targetValue, unit)
+                onSave = { name, iconName, colorHex, targetValue, unit, freqType, freqGoal, freqDays, interval, reminder, priority, desc ->
+                    viewModel.insertHabit(
+                        name, iconName, colorHex, targetValue, unit,
+                        freqType, freqGoal, freqDays, interval, reminder, priority, desc
+                    )
                     showAddHabitSheet = false
                 }
             )
