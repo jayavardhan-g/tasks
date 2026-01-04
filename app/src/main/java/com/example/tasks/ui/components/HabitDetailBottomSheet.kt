@@ -6,6 +6,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.*
@@ -23,8 +25,11 @@ import com.example.tasks.data.Habit
 fun HabitDetailBottomSheet(
     habit: Habit,
     onDismiss: () -> Unit,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    onProgressChange: (Int) -> Unit
 ) {
+    val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+    val effectiveProgress = if (habit.progressDate == today) habit.currentProgress else 0
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -120,24 +125,91 @@ fun HabitDetailBottomSheet(
             Spacer(modifier = Modifier.height(40.dp))
             
             // Toggle Button
-            Button(
-                onClick = {
-                    onToggle()
-                    // onDismiss() // Optional: keep open or close
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (habit.isCompletedToday) Color.Gray.copy(alpha = 0.2f) else habit.color,
-                    contentColor = if (habit.isCompletedToday) MaterialTheme.colorScheme.onSurface else Color.White
-                ),
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(16.dp)
-            ) {
-                Text(
-                    text = if (habit.isCompletedToday) "Mark Incomplete" else "Complete for Today",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+            // Action Button / Progress Controls
+            if (habit.targetValue > 1) {
+                Row(
+                    Modifier.fillMaxWidth(), 
+                    verticalAlignment = Alignment.CenterVertically, 
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                   // Minus Button
+                   Button(
+                       onClick = { onProgressChange(-1) },
+                       shape = RoundedCornerShape(12.dp),
+                       colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                       contentPadding = PaddingValues(0.dp),
+                       modifier = Modifier.size(56.dp)
+                   ) {
+                       Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                   }
+
+                   Spacer(modifier = Modifier.width(16.dp))
+
+                   Box(modifier = Modifier.size(80.dp), contentAlignment = Alignment.Center) {
+                       CircularProgressIndicator(
+                           progress = (effectiveProgress.toFloat() / habit.targetValue.toFloat()).coerceIn(0f, 1f),
+                           modifier = Modifier.fillMaxSize(),
+                           color = habit.color,
+                           strokeWidth = 6.dp,
+                           strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                       )
+                       Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                           Text(
+                               text = "$effectiveProgress",
+                               style = MaterialTheme.typography.titleLarge,
+                               fontWeight = FontWeight.Bold,
+                               color = habit.color
+                           )
+                           Text(
+                               text = "/${habit.targetValue}",
+                               style = MaterialTheme.typography.bodySmall,
+                               color = MaterialTheme.colorScheme.onSurfaceVariant
+                           )
+                       }
+                   }
+                   Spacer(modifier = Modifier.width(16.dp))
+                   
+                   // Plus Button
+                   Button(
+                       onClick = { onProgressChange(1) },
+                       shape = RoundedCornerShape(12.dp),
+                       colors = ButtonDefaults.buttonColors(containerColor = habit.color),
+                       contentPadding = PaddingValues(0.dp),
+                       modifier = Modifier.size(56.dp)
+                   ) {
+                       Icon(Icons.Default.Add, contentDescription = "Increase")
+                   }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                if (habit.isCompletedToday) {
+                     Text(
+                        text = "Goal Met!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = habit.color,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            
+            } else {
+                Button(
+                    onClick = {
+                        onToggle()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (habit.isCompletedToday) Color.Gray.copy(alpha = 0.2f) else habit.color,
+                        contentColor = if (habit.isCompletedToday) MaterialTheme.colorScheme.onSurface else Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Text(
+                        text = if (habit.isCompletedToday) "Mark Incomplete" else "Complete for Today",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

@@ -114,6 +114,7 @@ import java.util.*
 import com.example.tasks.data.TaskDraft
 import com.example.tasks.ui.components.WorkspaceProgressCard
 import com.example.tasks.ui.components.HabitDetailBottomSheet
+import com.example.tasks.ui.components.AddHabitSheet
 import com.example.tasks.data.Habit
 import kotlinx.coroutines.launch
 
@@ -136,11 +137,11 @@ fun TaskScreen(
     var editingChecklist by remember { mutableStateOf<List<com.example.tasks.data.ChecklistItem>>(emptyList()) }
     var showAddWorkspaceSheet by remember { mutableStateOf(false) }
     var isFabExpanded by remember { mutableStateOf(false) }
-    var showHabitPlaceholder by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Timeline, 1 = Workspace
     var isSearchActive by remember { mutableStateOf(false) }
     var showHabitDetailSheet by remember { mutableStateOf(false) }
     var selectedHabitForDetail by remember { mutableStateOf<Habit?>(null) }
+    var showAddHabitSheet by remember { mutableStateOf(false) }
     val matches by viewModel.matches.observeAsState(initial = emptyList())
     val habits by viewModel.habits.collectAsState()
     val currentMatchIndex by viewModel.currentMatchIndex.collectAsState()
@@ -361,7 +362,7 @@ fun TaskScreen(
                                     Text("Habit", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge)
                                 }
                                 FloatingActionButton(
-                                    onClick = { isFabExpanded = false; showHabitPlaceholder = true },
+                                    onClick = { isFabExpanded = false; showAddHabitSheet = true },
                                     modifier = subFabModifier,
                                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                                 ) {
@@ -423,7 +424,7 @@ fun TaskScreen(
                     tasks = globalTasks,
                     workspaces = workspacesMap,
                     habits = habits,
-                    onHabitToggle = { viewModel.toggleHabit(it) },
+                    onHabitToggle = { viewModel.onHabitClick(it) },
                     onHabitLongClick = { habit ->
                         selectedHabitForDetail = habit
                         showHabitDetailSheet = true
@@ -688,27 +689,27 @@ fun TaskScreen(
             )
         }
 
-        if (showHabitPlaceholder) {
-            AlertDialog(
-                onDismissRequest = { showHabitPlaceholder = false },
-                title = { Text("Add Habit") },
-                text = { Text("Habit tracking functionality is coming soon! Stay tuned.") },
-                confirmButton = {
-                    TextButton(onClick = { showHabitPlaceholder = false }) {
-                        Text("Awesome")
-                    }
+        if (showAddHabitSheet) {
+            AddHabitSheet(
+                onDismiss = { showAddHabitSheet = false },
+                onSave = { name, iconName, colorHex, targetValue, unit ->
+                    viewModel.insertHabit(name, iconName, colorHex, targetValue, unit)
+                    showAddHabitSheet = false
                 }
             )
         }
 
         if (showHabitDetailSheet && selectedHabitForDetail != null) {
+            val liveHabit = habits.find { it.id == selectedHabitForDetail!!.id } ?: selectedHabitForDetail!!
             HabitDetailBottomSheet(
-                habit = selectedHabitForDetail!!,
+                habit = liveHabit,
                 onDismiss = { showHabitDetailSheet = false },
                 onToggle = { 
-                    viewModel.toggleHabit(selectedHabitForDetail!!.id)
-                    // Refresh the selected habit in the sheet
-                    selectedHabitForDetail = habits.find { it.id == selectedHabitForDetail!!.id }
+                    viewModel.onHabitClick(liveHabit.id)
+                    // No need to manually update selectedHabitForDetail anymore as we use liveHabit
+                },
+                onProgressChange = { delta ->
+                    viewModel.updateHabitProgress(liveHabit.id, delta)
                 }
             )
         }

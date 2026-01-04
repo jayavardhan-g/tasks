@@ -16,10 +16,14 @@ data class Habit(
     val iconName: String,
     val colorHex: Long,
     val streak: Int = 0,
-    val lastCompletedDate: String? = null // yyyy-MM-dd
+    val lastCompletedDate: String? = null, // yyyy-MM-dd
+    val targetValue: Int = 1,
+    val currentProgress: Int = 0,
+    val progressDate: String? = null, // yyyy-MM-dd
+    val unit: String? = null
 ) {
     @Ignore
-    val color: Color = Color(colorHex)
+    val color: Color = Color(colorHex.toInt())
 
     @Ignore
     val icon: ImageVector = when (iconName) {

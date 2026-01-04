@@ -239,18 +239,99 @@ class TasksViewModel(
         checkTaskCompletion(task.id)
     }
 
-    fun toggleHabit(habitId: String) = viewModelScope.launch {
+    fun onHabitClick(habitId: String) = viewModelScope.launch {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val habit = habits.value.find { it.id == habitId } ?: return@launch
         
+        // Reset progress if it's a new day
+        val currentProgress = if (habit.progressDate == today) habit.currentProgress else 0
+        
         if (habit.lastCompletedDate == today) {
-            // Un-complete
-            repository.updateHabit(habit.copy(lastCompletedDate = null, streak = (habit.streak - 1).coerceAtLeast(0)))
+            // Already completed today. behavior: Decrement or Un-complete?
+            // If it's a progressive habit, let's decrement.
+            // If it's a simple habit (target=1), decrementing from 1 to 0 effectively un-completes it.
+            
+            val newProgress = (currentProgress - 1).coerceAtLeast(0)
+            
+            // Un-complete logic
+            repository.updateHabit(habit.copy(
+                lastCompletedDate = null, 
+                streak = (habit.streak - 1).coerceAtLeast(0),
+                currentProgress = newProgress,
+                progressDate = today
+            ))
             repository.deleteHabitHistory(habitId, today)
         } else {
-            // Complete
-            repository.updateHabit(habit.copy(lastCompletedDate = today, streak = habit.streak + 1))
-            repository.insertHabitHistory(HabitHistory(habitId = habitId, date = today))
+            // Not completed today. Increment.
+            val newProgress = currentProgress + 1
+            
+            if (newProgress >= habit.targetValue) {
+                // Goal Met! Mark complete.
+                repository.updateHabit(habit.copy(
+                    lastCompletedDate = today,
+                    streak = habit.streak + 1,
+                    currentProgress = newProgress,
+                    progressDate = today
+                ))
+                repository.insertHabitHistory(HabitHistory(habitId = habitId, date = today))
+            } else {
+                // Progress updated, but not complete yet
+                repository.updateHabit(habit.copy(
+                    currentProgress = newProgress,
+                    progressDate = today
+                ))
+            }
+        }
+    }
+
+    fun insertHabit(name: String, iconName: String, colorHex: Long, targetValue: Int, unit: String?) = viewModelScope.launch {
+        repository.insertHabit(Habit(
+            name = name, 
+            iconName = iconName, 
+            colorHex = colorHex,
+            targetValue = targetValue,
+            unit = unit
+        ))
+    }
+
+    fun updateHabitProgress(habitId: String, delta: Int) = viewModelScope.launch {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val habit = habits.value.find { it.id == habitId } ?: return@launch
+
+        // Reset progress if it's a new day
+        val currentProgress = if (habit.progressDate == today) habit.currentProgress else 0
+        
+        // Calculate new progress
+        val newProgress = (currentProgress + delta).coerceAtLeast(0)
+        
+        if (newProgress >= habit.targetValue) {
+            // Check if already completed to avoid redundant updates if progress increases beyond target
+            val wasComplete = habit.lastCompletedDate == today
+            
+            repository.updateHabit(habit.copy(
+                lastCompletedDate = today,
+                streak = if (wasComplete) habit.streak else habit.streak + 1,
+                currentProgress = newProgress,
+                progressDate = today
+            ))
+            
+            if (!wasComplete) {
+                repository.insertHabitHistory(HabitHistory(habitId = habitId, date = today))
+            }
+        } else {
+            // Not complete (or no longer complete)
+            val wasComplete = habit.lastCompletedDate == today
+            
+            repository.updateHabit(habit.copy(
+                lastCompletedDate = null,
+                streak = if (wasComplete) (habit.streak - 1).coerceAtLeast(0) else habit.streak,
+                currentProgress = newProgress,
+                progressDate = today
+            ))
+            
+            if (wasComplete) {
+                repository.deleteHabitHistory(habitId, today)
+            }
         }
     }
 }

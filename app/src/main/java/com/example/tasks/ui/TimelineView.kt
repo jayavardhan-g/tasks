@@ -870,8 +870,12 @@ fun HabitCircle(
                 color = habit.color.copy(alpha = 0.1f),
                 strokeWidth = 4.dp
             )
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            val effectiveProgress = if (habit.progressDate == today) habit.currentProgress else 0
+            val progressFraction = (effectiveProgress.toFloat() / habit.targetValue.toFloat()).coerceIn(0f, 1f)
+            
             androidx.compose.material3.CircularProgressIndicator(
-                progress = if (habit.isCompletedToday) 1f else 0f,
+                progress = progressFraction,
                 modifier = Modifier.fillMaxSize(),
                 color = habit.color,
                 strokeWidth = 4.dp,
