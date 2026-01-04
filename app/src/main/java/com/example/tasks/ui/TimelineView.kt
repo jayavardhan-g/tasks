@@ -255,20 +255,6 @@ fun TimelineView(
                     )
                 }
 
-                // Unified Today: Incomplete habits as chips
-                val incompleteHabits = habits.filter { !it.isCompletedToday }
-                if (incompleteHabits.isNotEmpty()) {
-                    item(key = "habits_today_chips") {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(bottom = 16.dp)
-                        ) {
-                            items(incompleteHabits) { habit ->
-                                HabitChip(habit = habit, onClick = { onHabitToggle(habit.id) })
-                            }
-                        }
-                    }
-                }
             }
 
             itemsIndexed(tasksForDate, key = { _, taskWithChecklist -> taskWithChecklist.task.id!! }) { taskIndex, taskWithChecklist ->
@@ -908,49 +894,3 @@ fun HabitCircle(
     }
 }
 
-@Composable
-fun HabitChip(
-    habit: com.example.tasks.data.Habit,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        color = habit.color.copy(alpha = 0.1f),
-        border = BorderStroke(1.dp, habit.color.copy(alpha = 0.2f))
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(habit.icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = habit.color)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(habit.name, style = MaterialTheme.typography.labelMedium, color = habit.color)
-        }
-    }
-}
-@Composable
-fun CircularCheckbox(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-    color: Color = Color(0xFF0056B3)
-) {
-    Box(
-        modifier = modifier
-            .size(20.dp)
-            .border(2.dp, if (checked) color else Color.Gray, CircleShape)
-            .background(if (checked) color else Color.Transparent, CircleShape)
-            .clickable { onCheckedChange(!checked) },
-        contentAlignment = Alignment.Center
-    ) {
-        if (checked) {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = Color.White
-            )
-        }
-    }
-}
