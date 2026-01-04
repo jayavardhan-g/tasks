@@ -51,7 +51,7 @@ def launch_emulator_sequence():
     except:
         target_avd = avds[0]
 
-    # --- 2. Select Boot Mode (NEW) ---
+    # --- 2. Select Boot Mode ---
     print(f"\n⚙️  Boot Options for {target_avd}:")
     print(" [1] 🚀 Quick Boot (Standard)  <-- Fastest")
     print(" [2] ❄️  Cold Boot (No Snapshot) <-- Use if app is glitching")
@@ -70,8 +70,23 @@ def launch_emulator_sequence():
     else:
         print(f"\n🚀 Launching {target_avd}...")
 
-    # --- 3. Launch ---
-    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # --- 3. Launch (DETACHED) ---
+    # We prepare platform-specific flags to detach the process
+    kwargs = {}
+    if platform.system() == "Windows":
+        # CREATE_NEW_PROCESS_GROUP = 0x00000200
+        # This prevents the emulator from receiving the Ctrl+C signal sent to this script
+        kwargs.update(creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+        # On Linux/Mac, start_new_session=True acts like 'setsid', detaching the process
+        kwargs.update(start_new_session=True)
+
+    subprocess.Popen(
+        cmd, 
+        stdout=subprocess.DEVNULL, 
+        stderr=subprocess.DEVNULL, 
+        **kwargs # Apply the detachment flags here
+    )
     
     print("⏳ Waiting for boot...")
     subprocess.run(["adb", "wait-for-device"])
@@ -89,7 +104,7 @@ def run_build_task(clean_install=False):
 
     print("\n🔨 Building and Updating App...")
     try:
-        subprocess.run([cmd, "installUniversalGmsDebug"], shell=(platform.system()=="Windows"), check=True, stdin=subprocess.DEVNULL)
+        subprocess.run([cmd, "installDebug"], shell=(platform.system()=="Windows"), check=True, stdin=subprocess.DEVNULL)
         print("\n🎉 SUCCESS! App updated.")
     except subprocess.CalledProcessError:
         print("\n💥 BUILD FAILED.")

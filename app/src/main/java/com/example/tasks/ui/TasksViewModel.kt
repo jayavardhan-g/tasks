@@ -9,15 +9,10 @@ import com.example.tasks.data.Task
 import com.example.tasks.data.TasksRepository
 import kotlinx.coroutines.launch
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.first
-import com.example.tasks.data.Workspace
-import com.example.tasks.data.ChecklistItem
-import com.example.tasks.data.TaskWithChecklist
+import kotlinx.coroutines.flow.*
+import com.example.tasks.data.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -45,6 +40,25 @@ class TasksViewModel(
 
     private val _showEmptyDates = MutableStateFlow(preferenceManager.getShowEmptyDates())
     val showEmptyDates: StateFlow<Boolean> = _showEmptyDates.asStateFlow()
+
+    val habits: StateFlow<List<Habit>> = repository.allHabits.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList()
+    )
+
+    init {
+        // Seed habits if needed
+        viewModelScope.launch {
+            repository.allHabits.first().let { currentHabits ->
+                if (currentHabits.isEmpty()) {
+                    repository.insertHabit(Habit(name = "Drink Water", iconName = "WaterDrop", colorHex = 0xFF2196F3))
+                    repository.insertHabit(Habit(name = "Read", iconName = "MenuBook", colorHex = 0xFFFF9800))
+                    repository.insertHabit(Habit(name = "Workout", iconName = "FitnessCenter", colorHex = 0xFF4CAF50))
+                }
+            }
+        }
+    }
 
     // For Workspace Tab (Full)
     val filteredTasks: LiveData<List<com.example.tasks.data.TaskWithChecklist>> = 
@@ -222,8 +236,22 @@ class TasksViewModel(
         for (item in deletedItems) {
             repository.deleteChecklistItem(item)
         }
-        
         checkTaskCompletion(task.id)
+    }
+
+    fun toggleHabit(habitId: String) = viewModelScope.launch {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val habit = habits.value.find { it.id == habitId } ?: return@launch
+        
+        if (habit.lastCompletedDate == today) {
+            // Un-complete
+            repository.updateHabit(habit.copy(lastCompletedDate = null, streak = (habit.streak - 1).coerceAtLeast(0)))
+            repository.deleteHabitHistory(habitId, today)
+        } else {
+            // Complete
+            repository.updateHabit(habit.copy(lastCompletedDate = today, streak = habit.streak + 1))
+            repository.insertHabitHistory(HabitHistory(habitId = habitId, date = today))
+        }
     }
 }
 

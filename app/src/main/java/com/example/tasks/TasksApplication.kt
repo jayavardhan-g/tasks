@@ -10,7 +10,8 @@ class TasksApplication : Application() {
         TasksRepository(
             database.taskDao(), 
             database.workspaceDao(),
-            database.checklistDao()
+            database.checklistDao(),
+            database.habitDao()
         ) 
     }
 }

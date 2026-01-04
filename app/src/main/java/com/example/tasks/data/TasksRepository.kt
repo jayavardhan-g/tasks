@@ -5,10 +5,12 @@ import kotlinx.coroutines.flow.Flow
 class TasksRepository(
     private val taskDao: TaskDao,
     private val workspaceDao: WorkspaceDao,
-    private val checklistDao: ChecklistDao
+    private val checklistDao: ChecklistDao,
+    private val habitDao: HabitDao
 ) {
     val allTasks: Flow<List<TaskWithChecklist>> = taskDao.getTasks()
     val allWorkspaces: Flow<List<Workspace>> = workspaceDao.getAllWorkspaces()
+    val allHabits: Flow<List<Habit>> = habitDao.getAllHabits()
 
     fun getTasksByWorkspace(workspaceId: Int): Flow<List<TaskWithChecklist>> {
         return taskDao.getTasksByWorkspace(workspaceId)
@@ -56,5 +58,30 @@ class TasksRepository(
     
     suspend fun deleteChecklistByTask(taskId: Int) {
         checklistDao.deleteByTaskId(taskId)
+    }
+
+    // Habits
+    suspend fun insertHabit(habit: Habit) {
+        habitDao.insertHabit(habit)
+    }
+
+    suspend fun updateHabit(habit: Habit) {
+        habitDao.updateHabit(habit)
+    }
+
+    suspend fun deleteHabit(habit: Habit) {
+        habitDao.deleteHabit(habit)
+    }
+
+    fun getHistoryForHabit(habitId: String): Flow<List<HabitHistory>> {
+        return habitDao.getHistoryForHabit(habitId)
+    }
+
+    suspend fun insertHabitHistory(history: HabitHistory) {
+        habitDao.insertHistory(history)
+    }
+
+    suspend fun deleteHabitHistory(habitId: String, date: String) {
+        habitDao.deleteHistory(habitId, date)
     }
 }

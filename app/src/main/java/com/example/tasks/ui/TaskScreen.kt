@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -112,6 +113,8 @@ import java.util.Date
 import java.util.*
 import com.example.tasks.data.TaskDraft
 import com.example.tasks.ui.components.WorkspaceProgressCard
+import com.example.tasks.ui.components.HabitDetailBottomSheet
+import com.example.tasks.data.Habit
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -136,9 +139,12 @@ fun TaskScreen(
     var showHabitPlaceholder by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Timeline, 1 = Workspace
     var isSearchActive by remember { mutableStateOf(false) }
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    var showHabitDetailSheet by remember { mutableStateOf(false) }
+    var selectedHabitForDetail by remember { mutableStateOf<Habit?>(null) }
     val matches by viewModel.matches.observeAsState(initial = emptyList())
+    val habits by viewModel.habits.collectAsState()
     val currentMatchIndex by viewModel.currentMatchIndex.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     
     var showArchivedOnly by remember { mutableStateOf(false) }
     var selectedWorkspaceForMenu by remember { mutableStateOf<Workspace?>(null) }
@@ -253,7 +259,13 @@ fun TaskScreen(
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                        } else {
+                        } else if (selectedTab == 2) {
+                            Text(
+                                "Habits",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else if (selectedTab == 1) {
                             if (selectedWorkspaceForDetail != null) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(onClick = { selectedWorkspaceForDetail = null }) {
@@ -313,6 +325,12 @@ fun TaskScreen(
                     label = { Text("Workspaces") },
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.TrendingUp, contentDescription = "Habits") },
+                    label = { Text("Habits") },
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 }
                 )
             }
         },
@@ -404,6 +422,12 @@ fun TaskScreen(
                 TimelineView(
                     tasks = globalTasks,
                     workspaces = workspacesMap,
+                    habits = habits,
+                    onHabitToggle = { viewModel.toggleHabit(it) },
+                    onHabitLongClick = { habit ->
+                        selectedHabitForDetail = habit
+                        showHabitDetailSheet = true
+                    },
                     timelineMode = timelineMode,
                     showEmptyDates = showEmptyDates,
                     onCheckedChange = { task, completed ->
@@ -427,7 +451,7 @@ fun TaskScreen(
                     },
                     scrollToTaskId = if (isSearchActive && matches.isNotEmpty()) matches[currentMatchIndex] else null
                 )
-            } else {
+            } else if (selectedTab == 1) {
                 // Workspaces Tab
                 Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                     if (selectedWorkspaceForDetail != null) {
@@ -518,6 +542,8 @@ fun TaskScreen(
                         }
                     }
                 }
+            } else if (selectedTab == 2) {
+                HabitDashboard(habits = habits)
             }
             
             // Dimmed Overlay
@@ -671,6 +697,18 @@ fun TaskScreen(
                     TextButton(onClick = { showHabitPlaceholder = false }) {
                         Text("Awesome")
                     }
+                }
+            )
+        }
+
+        if (showHabitDetailSheet && selectedHabitForDetail != null) {
+            HabitDetailBottomSheet(
+                habit = selectedHabitForDetail!!,
+                onDismiss = { showHabitDetailSheet = false },
+                onToggle = { 
+                    viewModel.toggleHabit(selectedHabitForDetail!!.id)
+                    // Refresh the selected habit in the sheet
+                    selectedHabitForDetail = habits.find { it.id == selectedHabitForDetail!!.id }
                 }
             )
         }

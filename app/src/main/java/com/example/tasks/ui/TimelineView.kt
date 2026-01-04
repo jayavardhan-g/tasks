@@ -3,6 +3,8 @@ package com.example.tasks.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 
@@ -18,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.derivedStateOf
@@ -82,6 +85,9 @@ enum class TimelineMode { DEFAULT, COLOR }
 fun TimelineView(
     tasks: List<com.example.tasks.data.TaskWithChecklist>,
     workspaces: Map<Int, com.example.tasks.data.Workspace> = emptyMap(),
+    habits: List<com.example.tasks.data.Habit> = emptyList(),
+    onHabitToggle: (String) -> Unit = {},
+    onHabitLongClick: (com.example.tasks.data.Habit) -> Unit = {},
     timelineMode: TimelineMode = TimelineMode.DEFAULT,
     showEmptyDates: Boolean = true,
     onCheckedChange: (Task, Boolean) -> Unit,
@@ -132,21 +138,12 @@ fun TimelineView(
         val list = mutableListOf<String>()
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         
-        val current = Calendar.getInstance().apply { timeInMillis = startTime }
-        val end = Calendar.getInstance().apply { timeInMillis = endTime }
-        
-        // Normalize to midnight for comparison
-        current.set(Calendar.HOUR_OF_DAY, 0)
-        current.set(Calendar.MINUTE, 0)
-        current.set(Calendar.SECOND, 0)
-        current.set(Calendar.MILLISECOND, 0)
-        
-        end.set(Calendar.HOUR_OF_DAY, 0)
-        end.set(Calendar.MINUTE, 0)
-        end.set(Calendar.SECOND, 0)
-        end.set(Calendar.MILLISECOND, 0)
-        
-        while (!current.after(end)) {
+        val start = Calendar.getInstance()
+        val end = Calendar.getInstance()
+        end.add(Calendar.DAY_OF_YEAR, 30) // Show next 30 days
+
+        var current = start
+        while (current.before(end)) {
             list.add(dateFormat.format(current.time))
             current.add(Calendar.DAY_OF_YEAR, 1)
         }
@@ -161,6 +158,8 @@ fun TimelineView(
         }
     }
 
+    val todayStr = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
+
     val listState = rememberLazyListState()
 
     var isScrolling by remember { mutableStateOf(false) }
@@ -173,7 +172,6 @@ fun TimelineView(
         }
     }
     
-    val todayStr = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
     val todayIndex = remember(dateList, groupedTasks) {
         calculateIndexForDate(
             todayStr,
@@ -231,6 +229,10 @@ fun TimelineView(
             }
             
             if (isToday) {
+                item(key = "habit_strip_$dateString") {
+                    HabitStrip(habits = habits, onHabitToggle = onHabitToggle, onHabitLongClick = onHabitLongClick)
+                }
+                
                 val now = System.currentTimeMillis()
                 val overdueCount = tasks.count { !it.task.isCompleted && it.task.deadline > 0L && it.task.deadline < now }
                 val unplannedCount = unplannedTasks.count { !it.task.isCompleted }
@@ -251,6 +253,21 @@ fun TimelineView(
                             }
                         }
                     )
+                }
+
+                // Unified Today: Incomplete habits as chips
+                val incompleteHabits = habits.filter { !it.isCompletedToday }
+                if (incompleteHabits.isNotEmpty()) {
+                    item(key = "habits_today_chips") {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+                            items(incompleteHabits) { habit ->
+                                HabitChip(habit = habit, onClick = { onHabitToggle(habit.id) })
+                            }
+                        }
+                    }
                 }
             }
 
@@ -332,48 +349,48 @@ fun TimelineView(
             }
         )
     }
-    
+
     // "Go to Today" Floating Button
-    AnimatedVisibility(
-        visible = !isTodayVisible && isScrolling,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .padding(bottom = 120.dp) // Anchored above CalendarStrip
-    ) {
-        Surface(
-            onClick = {
-                scope.launch {
-                    if (todayIndex >= 0) {
-                        listState.animateScrollToItem(todayIndex)
-                    }
-                }
-            },
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            shadowElevation = 6.dp
+        AnimatedVisibility(
+            visible = !isTodayVisible && isScrolling,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 120.dp) // Anchored above CalendarStrip
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                onClick = {
+                    scope.launch {
+                        if (todayIndex >= 0) {
+                            listState.animateScrollToItem(todayIndex)
+                        }
+                    }
+                },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shadowElevation = 6.dp
             ) {
-                Icon(
-                    imageVector = Icons.Default.Schedule,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Today",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Today",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
-}
 }
 
 private fun calculateIndexForDate(
@@ -819,5 +836,121 @@ fun TimelineAddTaskRow(
             color = Color.Gray,
             modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
         )
+    }
+}
+@Composable
+fun HabitStrip(
+    habits: List<com.example.tasks.data.Habit>,
+    onHabitToggle: (String) -> Unit,
+    onHabitLongClick: (com.example.tasks.data.Habit) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp)
+    ) {
+        items(habits) { habit ->
+            HabitCircle(
+                habit = habit, 
+                onToggle = { onHabitToggle(habit.id) },
+                onLongClick = { onHabitLongClick(habit) }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun HabitCircle(
+    habit: com.example.tasks.data.Habit,
+    onToggle: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.combinedClickable(
+            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+            indication = null,
+            onClick = onToggle,
+            onLongClick = onLongClick
+        )
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(56.dp)) {
+            androidx.compose.material3.CircularProgressIndicator(
+                progress = 1f,
+                modifier = Modifier.fillMaxSize(),
+                color = habit.color.copy(alpha = 0.1f),
+                strokeWidth = 4.dp
+            )
+            androidx.compose.material3.CircularProgressIndicator(
+                progress = if (habit.isCompletedToday) 1f else 0f,
+                modifier = Modifier.fillMaxSize(),
+                color = habit.color,
+                strokeWidth = 4.dp,
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+            Icon(
+                habit.icon,
+                contentDescription = habit.name,
+                tint = if (habit.isCompletedToday) habit.color else Color.Gray,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            habit.name.take(8),
+            style = MaterialTheme.typography.labelSmall,
+            color = if (habit.isCompletedToday) habit.color else Color.Gray,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+fun HabitChip(
+    habit: com.example.tasks.data.Habit,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        color = habit.color.copy(alpha = 0.1f),
+        border = BorderStroke(1.dp, habit.color.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(habit.icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = habit.color)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(habit.name, style = MaterialTheme.typography.labelMedium, color = habit.color)
+        }
+    }
+}
+@Composable
+fun CircularCheckbox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    color: Color = Color(0xFF0056B3)
+) {
+    Box(
+        modifier = modifier
+            .size(20.dp)
+            .border(2.dp, if (checked) color else Color.Gray, CircleShape)
+            .background(if (checked) color else Color.Transparent, CircleShape)
+            .clickable { onCheckedChange(!checked) },
+        contentAlignment = Alignment.Center
+    ) {
+        if (checked) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = Color.White
+            )
+        }
     }
 }
