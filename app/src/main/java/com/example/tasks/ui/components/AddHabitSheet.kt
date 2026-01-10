@@ -159,9 +159,9 @@ fun AddHabitSheet(
 
             // 1. Color & Icon
             HabitOptionRow(
-                icon = Icons.Default.ColorLens,
-                text = "Color & Icon",
-                valueText = selectedIconName, // Could show icon or color box here ideally
+                icon = habitIcons[selectedIconName] ?: Icons.Default.WaterDrop,
+                text = "Habit Icon",
+                valueText = null, 
                 color = selectedColor,
                 onClick = { showColorIconSheet = true }
             )
@@ -192,7 +192,7 @@ fun AddHabitSheet(
              HabitOptionRow(
                 icon = Icons.Default.Notifications,
                 text = "Reminder",
-                valueText = if (isReminderOn) reminderTime else "Off",
+                valueText = if (isReminderOn) formatTime(reminderTime) else "Off",
                 onClick = { showReminderSheet = true }
             )
 
@@ -217,7 +217,6 @@ fun AddHabitSheet(
                 onSave = { c, i ->
                     selectedColor = c
                     selectedIconName = i
-                    showColorIconSheet = false
                 }
             )
         }
@@ -230,7 +229,6 @@ fun AddHabitSheet(
                 onSave = { t, u ->
                     targetValue = t
                     unit = u
-                    showTargetSheet = false
                 }
             )
         }
@@ -247,7 +245,6 @@ fun AddHabitSheet(
                     frequencyGoal = g
                     frequencyDays = d
                     repeatInterval = i
-                    showFrequencySheet = false
                 }
             )
         }
@@ -260,7 +257,6 @@ fun AddHabitSheet(
                 onSave = { isOn, time ->
                     isReminderOn = isOn
                     reminderTime = time
-                    showReminderSheet = false
                 }
             )
         }
@@ -271,7 +267,6 @@ fun AddHabitSheet(
                 onDismiss = { showPrioritySheet = false },
                 onSave = { p -> 
                     priority = p
-                    showPrioritySheet = false
                 }
             )
         }
@@ -294,7 +289,7 @@ fun HabitOptionRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (color != null) {
-             Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(color))
+             Icon(icon, contentDescription = null, tint = color)
         } else {
              Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -330,28 +325,33 @@ fun ColorIconBottomSheet(
      
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
-            Text("Color & Icon", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Habit Icon", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
             
             // Reusing existing selection UI logic basically
             val colors = listOf(Color(0xFF2196F3), Color(0xFFFF9800), Color(0xFF4CAF50), Color(0xFFF44336), Color(0xFF9C27B0), Color(0xFF009688))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 colors.forEach { color ->
-                    ColorItem(color = color, isSelected = selectedColor == color, onClick = { selectedColor = color })
+                    ColorItem(color = color, isSelected = selectedColor == color, onClick = { 
+                        selectedColor = color
+                        onSave(color, selectedIconName)
+                    })
                 }
             }
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            val icons = listOf("WaterDrop" to Icons.Default.WaterDrop, "FitnessCenter" to Icons.Default.FitnessCenter, "MenuBook" to Icons.Default.MenuBook, "DirectionsRun" to Icons.Default.DirectionsRun, "SelfImprovement" to Icons.Default.SelfImprovement, "Brush" to Icons.Default.Brush, "Code" to Icons.Default.Code, "NightsStay" to Icons.Default.NightsStay)
+            
+            val icons = habitIcons.entries.toList()
             LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(150.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(icons) { (name, vector) ->
-                    HabitIconItem(icon = vector, isSelected = selectedIconName == name, color = if (selectedIconName == name) selectedColor else MaterialTheme.colorScheme.onSurfaceVariant, onClick = { selectedIconName = name })
+                    HabitIconItem(icon = vector, isSelected = selectedIconName == name, color = if (selectedIconName == name) selectedColor else MaterialTheme.colorScheme.onSurfaceVariant, onClick = { 
+                        selectedIconName = name
+                        onSave(selectedColor, name)
+                    })
                 }
             }
-            
-             Button(onClick = { onSave(selectedColor, selectedIconName) }, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) { Text("Done") }
-             Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -373,14 +373,29 @@ fun TargetBottomSheet(
             Spacer(modifier = Modifier.height(24.dp))
             
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { if(target > 1) target-- }) { Icon(Icons.Default.Remove, null) }
+                IconButton(onClick = { 
+                    if(target > 1) {
+                        target-- 
+                        onSave(target, unit)
+                    }
+                }) { Icon(Icons.Default.Remove, null) }
                 Text(target.toString(), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(horizontal = 16.dp))
-                IconButton(onClick = { target++ }) { Icon(Icons.Default.Add, null) }
+                IconButton(onClick = { 
+                    target++ 
+                    onSave(target, unit)
+                }) { Icon(Icons.Default.Add, null) }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("Unit (Optional)") }, modifier = Modifier.fillMaxWidth())
-            Button(onClick = { onSave(target, unit) }, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) { Text("Done") }
-            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = unit, 
+                onValueChange = { 
+                    unit = it
+                    onSave(target, unit)
+                }, 
+                label = { Text("Unit (Optional)") }, 
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -409,7 +424,10 @@ fun FrequencyBottomSheet(
              Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                   listOf("DAILY", "WEEKLY_GOAL", "SPECIFIC_DAYS", "REPEAT_INTERVAL").forEach { t ->
                       val label = when(t) { "WEEKLY_GOAL" -> "Weekly"; "SPECIFIC_DAYS" -> "Days"; "REPEAT_INTERVAL" -> "Interval"; else -> "Daily" }
-                      FilterChip(selected = type == t, onClick = { type = t }, label = { Text(label) })
+                      FilterChip(selected = type == t, onClick = { 
+                          type = t 
+                          onSave(type, goal, days, interval)
+                      }, label = { Text(label) })
                   }
              }
              Spacer(modifier = Modifier.height(16.dp))
@@ -417,25 +435,41 @@ fun FrequencyBottomSheet(
              when(type) {
                  "WEEKLY_GOAL" -> {
                       Text("Goal: $goal times / week")
-                      Slider(value = goal.toFloat(), onValueChange = { goal = it.toInt() }, valueRange = 1f..7f, steps = 5)
+                      Slider(
+                          value = goal.toFloat(), 
+                          onValueChange = { 
+                              goal = it.toInt()
+                              onSave(type, goal, days, interval)
+                          }, 
+                          valueRange = 1f..7f, 
+                          steps = 5
+                      )
                  }
                  "SPECIFIC_DAYS" -> {
                      Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                          val dLabels = listOf("M", "T", "W", "T", "F", "S", "S")
                          dLabels.forEachIndexed { i, l ->
                              val dNum = i + 1
-                             FilterChip(selected = days.contains(dNum), onClick = { days = if(days.contains(dNum)) days - dNum else days + dNum }, label = { Text(l) })
+                             FilterChip(selected = days.contains(dNum), onClick = { 
+                                 days = if(days.contains(dNum)) days - dNum else days + dNum
+                                 onSave(type, goal, days, interval)
+                             }, label = { Text(l) })
                          }
                      }
                  }
                  "REPEAT_INTERVAL" -> {
                      Text("Every $interval days")
-                     Slider(value = interval.toFloat(), onValueChange = { interval = it.toInt() }, valueRange = 1f..30f)
+                     Slider(
+                         value = interval.toFloat(), 
+                         onValueChange = { 
+                             interval = it.toInt()
+                             onSave(type, goal, days, interval)
+                         }, 
+                         valueRange = 1f..30f
+                     )
                  }
              }
-            
-            Button(onClick = { onSave(type, goal, days, interval) }, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) { Text("Done") }
-            Spacer(modifier = Modifier.height(16.dp))
+             Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -450,22 +484,86 @@ fun ReminderBottomSheet(
 ) {
     var isOn by remember { mutableStateOf(initialIsOn) }
     var time by remember { mutableStateOf(initialTime) }
+    var showTimePicker by remember { mutableStateOf(false) }
     
+    // Helper to format time for display (Moved to top level, removed from here)
+
     ModalBottomSheet(onDismissRequest = onDismiss) {
          Column(modifier = Modifier.padding(16.dp)) {
-            Text("Reminder", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            // Header
+            Text(
+                 text = if (isOn) "Reminder: ${formatTime(time)}" else "No reminder",
+                 style = MaterialTheme.typography.titleMedium,
+                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 16.dp)
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Enable Reminder")
-                Switch(checked = isOn, onCheckedChange = { isOn = it })
+
+            // Presets
+            val presets = listOf(
+                "Morning" to "09:00",
+                "Afternoon" to "12:00",
+                "Evening" to "18:00",
+                "Night" to "21:00"
+            )
+            
+            presets.forEach { (label, presetTime) ->
+                com.example.tasks.ui.DateTimePickerRow(
+                    icon = if (label == "Morning") Icons.Default.WbSunny else if (label == "Night") Icons.Default.NightsStay else Icons.Default.AccessTime, 
+                    text = label,
+                    subtext = formatTime(presetTime),
+                    onClick = {
+                        isOn = true
+                        time = presetTime
+                        onSave(true, presetTime)
+                    }
+                )
             }
-            if(isOn) {
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time (HH:mm)") }, modifier = Modifier.fillMaxWidth())
-            }
-            Button(onClick = { onSave(isOn, time) }, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) { Text("Done") }
-            Spacer(modifier = Modifier.height(16.dp))
+
+            // Custom Time
+            com.example.tasks.ui.DateTimePickerRow(
+                icon = Icons.Default.Edit,
+                text = "Custom time",
+                onClick = { showTimePicker = true }
+            )
+
+            // No Reminder
+            com.example.tasks.ui.DateTimePickerRow(
+                icon = Icons.Default.NotificationsOff,
+                text = "No reminder",
+                onClick = {
+                    isOn = false
+                    onSave(false, time)
+                }
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
          }
+    }
+    
+    if (showTimePicker) {
+         val parts = time.split(":")
+         val startHour = parts.getOrNull(0)?.toIntOrNull() ?: 9
+         val startMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+         
+         val state = rememberTimePickerState(initialHour = startHour, initialMinute = startMinute)
+         
+         AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val newTime = String.format("%02d:%02d", state.hour, state.minute)
+                    isOn = true
+                    time = newTime
+                    onSave(true, newTime)
+                    showTimePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+            },
+            text = { TimePicker(state = state) }
+        )
     }
 }
 
@@ -483,11 +581,17 @@ fun HabitPriorityBottomSheet(
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("LOW", "MEDIUM", "HIGH").forEach { p ->
-                    FilterChip(selected = priority == p, onClick = { priority = p }, label = { Text(p) })
+                    FilterChip(
+                        selected = priority == p, 
+                        onClick = { 
+                            priority = p
+                            onSave(priority)
+                        }, 
+                        label = { Text(p) }
+                    )
                 }
             }
-            Button(onClick = { onSave(priority) }, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) { Text("Done") }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
          }
     }
 }
@@ -549,3 +653,26 @@ fun ColorItem(
         }
     }
 }
+
+// Helper to format time for display
+fun formatTime(t: String): String {
+    return try {
+        val parts = t.split(":")
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, parts[0].toInt())
+            set(java.util.Calendar.MINUTE, parts[1].toInt())
+        }
+        java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()).format(cal.time)
+    } catch (e: Exception) { t }
+}
+
+val habitIcons = mapOf(
+    "WaterDrop" to Icons.Default.WaterDrop, 
+    "FitnessCenter" to Icons.Default.FitnessCenter, 
+    "MenuBook" to Icons.Default.MenuBook, 
+    "DirectionsRun" to Icons.Default.DirectionsRun, 
+    "SelfImprovement" to Icons.Default.SelfImprovement, 
+    "Brush" to Icons.Default.Brush, 
+    "Code" to Icons.Default.Code, 
+    "NightsStay" to Icons.Default.NightsStay
+)
