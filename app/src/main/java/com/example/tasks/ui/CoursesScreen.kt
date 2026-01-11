@@ -25,47 +25,28 @@ fun CoursesScreen(
     viewModel: TasksViewModel
 ) {
     val courses by viewModel.allCourses.observeAsState(emptyList())
-    var showAddCourseSheet by remember { mutableStateOf(false) }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddCourseSheet = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Course")
-            }
-        }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding).padding(16.dp)) {
-            Text(
-                text = "Courses",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            if (courses.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No courses added yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    courses.forEach { course ->
-                         item(key = course.id) {
-                              CourseCard(course = course, viewModel = viewModel)
-                         }
-                    }
-                }
-            }
-        }
-    }
-    
-    if (showAddCourseSheet) {
-        AddCourseSheet(
-            onDismiss = { showAddCourseSheet = false },
-            onSave = { name, prof, loc, color, schedules ->
-                viewModel.insertCourse(name, prof, loc, color, schedules)
-                showAddCourseSheet = false
-            }
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = "Courses",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
         )
+
+        if (courses.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No courses added yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                courses.forEach { course ->
+                        item(key = course.id) {
+                            CourseCard(course = course, viewModel = viewModel)
+                        }
+                }
+            }
+        }
     }
 }
 

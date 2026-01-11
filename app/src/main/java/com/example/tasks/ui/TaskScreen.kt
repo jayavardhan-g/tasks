@@ -45,8 +45,6 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.animation.AnimatedVisibility
@@ -84,7 +82,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Repeat
+import com.example.tasks.ui.components.AddCourseSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -98,7 +101,6 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
@@ -145,6 +147,7 @@ fun TaskScreen(
     var showHabitDetailSheet by remember { mutableStateOf(false) }
     var selectedHabitForDetail by remember { mutableStateOf<Habit?>(null) }
     var showAddHabitSheet by remember { mutableStateOf(false) }
+    var showAddCourseSheet by remember { mutableStateOf(false) }
     val matches by viewModel.matches.observeAsState(initial = emptyList())
     val habits by viewModel.habits.collectAsState()
     val currentMatchIndex by viewModel.currentMatchIndex.collectAsState()
@@ -352,10 +355,10 @@ fun TaskScreen(
             }
         },
         floatingActionButton = {
-            Box(
-                contentAlignment = Alignment.BottomEnd,
-                modifier = Modifier.padding(bottom = if (selectedTab == 0) 80.dp else 16.dp)
-            ) {
+                Box(
+                    contentAlignment = Alignment.BottomEnd,
+                    modifier = Modifier.padding(bottom = if (selectedTab == 0) 80.dp else 16.dp)
+                ) {
                 val rotation by animateFloatAsState(if (isFabExpanded) 45f else 0f)
 
                 Column(
@@ -413,6 +416,20 @@ fun TaskScreen(
                                     Icon(Icons.Default.Add, contentDescription = "Add Task", modifier = Modifier.size(20.dp))
                                 }
                             }
+                            
+                            // Course Option
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(end = 8.dp)) {
+                                    Text("Course", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge)
+                                }
+                                FloatingActionButton(
+                                    onClick = { isFabExpanded = false; showAddCourseSheet = true },
+                                    modifier = subFabModifier,
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Icon(Icons.Default.School, contentDescription = "Add Course", modifier = Modifier.size(20.dp))
+                                }
+                            }
                         }
                     }
 
@@ -429,8 +446,8 @@ fun TaskScreen(
                         )
                     }
                 }
-            }
         }
+    }
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(innerPadding)) {
@@ -732,6 +749,16 @@ fun TaskScreen(
                 },
                 onProgressChange = { delta ->
                     viewModel.updateHabitProgress(liveHabit.id, delta)
+                }
+            )
+        }
+
+        if (showAddCourseSheet) {
+            AddCourseSheet(
+                onDismiss = { showAddCourseSheet = false },
+                onSave = { name, prof, loc, color, schedules ->
+                    viewModel.insertCourse(name, prof, loc, color, schedules)
+                    showAddCourseSheet = false
                 }
             )
         }
