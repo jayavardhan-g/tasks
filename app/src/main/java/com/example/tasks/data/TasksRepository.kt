@@ -6,7 +6,8 @@ class TasksRepository(
     private val taskDao: TaskDao,
     private val workspaceDao: WorkspaceDao,
     private val checklistDao: ChecklistDao,
-    private val habitDao: HabitDao
+    private val habitDao: HabitDao,
+    private val courseDao: CourseDao
 ) {
     val allTasks: Flow<List<TaskWithChecklist>> = taskDao.getTasks()
     val allWorkspaces: Flow<List<Workspace>> = workspaceDao.getAllWorkspaces()
@@ -83,5 +84,32 @@ class TasksRepository(
 
     suspend fun deleteHabitHistory(habitId: String, date: String) {
         habitDao.deleteHistory(habitId, date)
+    }
+
+    // Courses
+    val allCourses: Flow<List<Course>> = courseDao.getAllCourses()
+
+    suspend fun insertCourse(course: Course) {
+        courseDao.insertCourse(course)
+    }
+
+    suspend fun deleteCourse(course: Course) {
+        courseDao.deleteCourse(course)
+    }
+
+    fun getAttendanceForDate(date: String): Flow<List<AttendanceRecord>> {
+        return courseDao.getAttendanceForDate(date)
+    }
+    
+    fun getAttendanceForCourse(courseId: Int): Flow<List<AttendanceRecord>> {
+        return courseDao.getAttendanceForCourse(courseId)
+    }
+
+    suspend fun insertAttendance(record: AttendanceRecord) {
+        courseDao.insertAttendance(record)
+    }
+
+    suspend fun deleteAttendance(courseId: Int, date: String) {
+        courseDao.deleteAttendance(courseId, date)
     }
 }

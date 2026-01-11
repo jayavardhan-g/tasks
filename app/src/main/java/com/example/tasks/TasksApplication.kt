@@ -11,7 +11,8 @@ class TasksApplication : Application() {
             database.taskDao(), 
             database.workspaceDao(),
             database.checklistDao(),
-            database.habitDao()
+            database.habitDao(),
+            database.courseDao()
         ) 
     }
 }

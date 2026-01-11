@@ -45,6 +45,9 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -146,6 +149,7 @@ fun TaskScreen(
     val habits by viewModel.habits.collectAsState()
     val currentMatchIndex by viewModel.currentMatchIndex.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val todayClasses by viewModel.todayClasses.observeAsState(emptyList())
     
     var showArchivedOnly by remember { mutableStateOf(false) }
     var selectedWorkspaceForMenu by remember { mutableStateOf<Workspace?>(null) }
@@ -266,6 +270,12 @@ fun TaskScreen(
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
+                        } else if (selectedTab == 3) {
+                             Text(
+                                "Courses",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
                         } else if (selectedTab == 1) {
                             if (selectedWorkspaceForDetail != null) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -332,6 +342,12 @@ fun TaskScreen(
                     label = { Text("Habits") },
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.School, contentDescription = "Courses") },
+                    label = { Text("Courses") },
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 }
                 )
             }
         },
@@ -424,6 +440,7 @@ fun TaskScreen(
                     tasks = globalTasks,
                     workspaces = workspacesMap,
                     habits = habits,
+                    todayClasses = todayClasses,
                     onHabitToggle = { viewModel.onHabitClick(it) },
                     onHabitLongClick = { habit ->
                         selectedHabitForDetail = habit
@@ -545,6 +562,8 @@ fun TaskScreen(
                 }
             } else if (selectedTab == 2) {
                 HabitDashboard(habits = habits)
+            } else if (selectedTab == 3) {
+                CoursesScreen(viewModel = viewModel)
             }
             
             // Dimmed Overlay

@@ -65,6 +65,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.NotificationsNone
@@ -95,6 +97,7 @@ fun TimelineView(
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit,
     onAddTaskAtDate: (Long) -> Unit,
+    todayClasses: List<Pair<com.example.tasks.data.Course, com.example.tasks.data.ClassSchedule>> = emptyList(),
     scrollToTaskId: Int? = null,
     modifier: Modifier = Modifier
 ) {
@@ -229,6 +232,25 @@ fun TimelineView(
             }
             
             if (isToday) {
+                // Show Classes
+                if (todayClasses.isNotEmpty()) {
+                    item(key = "classes_header") {
+                        Text(
+                            text = "Today's Schedule",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    itemsIndexed(todayClasses, key = { index, _ -> "class_$index" }) { _, (course, schedule) ->
+                        ClassItem(course, schedule)
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
                 // Filter habits based on frequency
                 val filteredHabits = habits.filter { habit ->
                     when (habit.frequencyType) {
@@ -458,6 +480,53 @@ private fun calculateUnplannedHeaderIndex(
         index += 1 // Add Task Row
     }
     return index // This should be the index of "unplanned_header"
+}
+
+@Composable
+fun ClassItem(course: com.example.tasks.data.Course, schedule: com.example.tasks.data.ClassSchedule) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .height(IntrinsicSize.Min)
+    ) {
+        // Time Column
+        Column(
+            horizontalAlignment = Alignment.End,
+            modifier = Modifier.width(60.dp).padding(end = 12.dp)
+        ) {
+            Text(schedule.startTime, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Text(schedule.endTime, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        }
+        
+        // Vertical Divider Line
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .fillMaxHeight()
+                .background(course.color, RoundedCornerShape(2.dp))
+        )
+        
+        // Course Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp)
+                .clickable { /* TODO: Mark attendance or show details */ },
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f))
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(course.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(course.location, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text(course.professor, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
 }
 
 

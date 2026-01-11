@@ -3,12 +3,13 @@ package com.example.tasks.data
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
-@Database(entities = [Task::class, Workspace::class, ChecklistItem::class, Habit::class, HabitHistory::class], version = 11, exportSchema = false)
+@Database(entities = [Task::class, Workspace::class, ChecklistItem::class, Habit::class, HabitHistory::class, Course::class, AttendanceRecord::class], version = 11, exportSchema = false)
 abstract class TaskDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun workspaceDao(): WorkspaceDao
     abstract fun checklistDao(): ChecklistDao
     abstract fun habitDao(): HabitDao
+    abstract fun courseDao(): CourseDao
 
     companion object {
         @Volatile

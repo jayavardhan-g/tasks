@@ -10,6 +10,7 @@ import com.example.tasks.data.TasksRepository
 import kotlinx.coroutines.launch
 
 import kotlinx.coroutines.flow.*
+import com.example.tasks.data.ClassSchedule
 import com.example.tasks.data.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -282,6 +283,46 @@ class TasksViewModel(
                 ))
             }
         }
+    }
+
+    // Courses
+    val allCourses: LiveData<List<Course>> = repository.allCourses.asLiveData()
+    
+    // Helper to get today's classes
+    val todayClasses: LiveData<List<Pair<Course, ClassSchedule>>> = repository.allCourses
+        .map { courses ->
+            val calendar = Calendar.getInstance()
+            val todayDay = calendar.get(Calendar.DAY_OF_WEEK) // Sunday=1, Monday=2...
+            
+            courses.flatMap { course ->
+                try {
+                    val arrayType = Array<ClassSchedule>::class.java
+                    val schedulesArray = com.google.gson.Gson().fromJson(course.scheduleJson, arrayType) ?: emptyArray()
+                    schedulesArray.toList().filter { it.dayOfWeek == todayDay }.map { schedule -> course to schedule }
+                } catch (e: Exception) { 
+                    e.printStackTrace()
+                    emptyList<Pair<Course, ClassSchedule>>() 
+                }
+            }.sortedBy { it.second.startTime }
+        }
+        .asLiveData()
+    
+    fun insertCourse(name: String, professor: String, location: String, colorHex: Long, schedule: List<ClassSchedule>) = viewModelScope.launch {
+        val json = com.google.gson.Gson().toJson(schedule)
+        repository.insertCourse(Course(name = name, professor = professor, location = location, colorHex = colorHex, scheduleJson = json))
+    }
+    
+    fun deleteCourse(course: Course) = viewModelScope.launch {
+        repository.deleteCourse(course)
+    }
+    
+    fun markAttendance(courseId: Int, date: String, status: String) = viewModelScope.launch {
+        // If status is empty/null logic could be delete, but here we just insert/overwrite
+        repository.insertAttendance(AttendanceRecord(courseId = courseId, date = date, status = status))
+    }
+    
+    fun getAttendanceForCourse(courseId: Int): LiveData<List<AttendanceRecord>> {
+        return repository.getAttendanceForCourse(courseId).asLiveData()
     }
 
     fun insertHabit(
